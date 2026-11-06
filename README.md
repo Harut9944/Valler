@@ -2,7 +2,7 @@
 
 Everyday desktop utilities in one window, for Windows, Linux (GNOME and KDE) and
 macOS (Apple silicon and Intel). A cross-platform Rust rewrite of an open-source
-macOS menu-bar utility collection (GPL-3.0-or-later).
+macOS menu-bar utility collection.
 
 ## What works in this version
 
