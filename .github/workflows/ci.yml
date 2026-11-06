@@ -1,5 +1,5 @@
 # Checks every push and pull request on Linux, Windows and macOS:
-# lints (clippy, warnings are errors) and runs the test suite.
+# lints (clippy, warnings are errors), runs the test suite and builds a release binary.
 name: CI
 
 on:
@@ -43,3 +43,6 @@ jobs:
 
       - name: Tests
         run: cargo test --locked
+
+      - name: Build
+        run: cargo build --locked --release

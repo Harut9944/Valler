@@ -178,10 +178,10 @@ pub fn move_stream(_: u32, _: u32) {}
 fn with_endpoint(name: &str, flow: EDataFlow, f: impl Fn(&IAudioEndpointVolume)) {
     let Ok(en) = enumerator() else { return };
     for (dev, d) in devices(&en, flow) {
-        if d.name == name {
-            if let Some(ep) = endpoint(&dev) {
-                f(&ep);
-            }
+        if d.name == name
+            && let Some(ep) = endpoint(&dev)
+        {
+            f(&ep);
         }
     }
 }
