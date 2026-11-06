@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 // ------------------------------------------------------------- command bar
 
 enum CmdAction {
+    Plain,
     Launch(crate::apps::AppEntry),
     Copy(String),
     Open(Sub),
@@ -69,6 +70,11 @@ fn command_rows(app: &ValleApp) -> Vec<CmdRow> {
     if app.store.is_installed("quick_toggles") {
         if let Some(sc) = score(q, "Lock screen") {
             rows.push(CmdRow { icon: ph::LOCK, title: "Lock screen".into(), detail: "Action".into(), score: sc + 30, action: CmdAction::Lock });
+        }
+    }
+    if app.store.is_installed("paste_plain") {
+        if let Some(sc) = score(q, "Paste as plain text") {
+            rows.push(CmdRow { icon: ph::TEXT_T, title: "Paste as plain text".into(), detail: "Action · removes formatting from the clipboard".into(), score: sc + 30, action: CmdAction::Plain });
         }
     }
     if let Some(sc) = score(q, "Settings") {
@@ -179,6 +185,7 @@ pub fn command_bar_view(app: &mut ValleApp, ui: &mut Ui, ctx: &egui::Context) {
     ui.label(caption(format!("{} {} to move · Enter to run · Ctrl+K opens this from anywhere in Valler", ph::ARROW_UP, ph::ARROW_DOWN)));
     let Some(row) = run.and_then(|i| rows.into_iter().nth(i)) else { return };
     match row.action {
+        CmdAction::Plain => crate::tools_ui::make_plain(app, ctx),
         CmdAction::Launch(a) => match crate::apps::launch(&a) {
             Ok(_) => app.toast(format!("Opening {}", a.name)),
             Err(e) => app.toast(format!("Couldn't open {}: {e}", a.name)),

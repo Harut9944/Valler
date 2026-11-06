@@ -172,7 +172,15 @@ pub fn mixer(app: &mut ValleApp, ui: &mut Ui) {
         });
         return;
     }
-    let max = if app.store.mixer_boost { 2.0 } else { 1.0 };
+    let max = if app.store.mixer_boost && state.caps.boost { 2.0 } else { 1.0 };
+    if let Some(m) = &state.message {
+        card(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(ui::icon(ph::INFO, 18.0, ui::ACCENT));
+                ui.add(egui::Label::new(caption(m)).wrap());
+            });
+        });
+    }
     if app.store.is_installed("mixer") {
         card(ui, |ui| {
             if state.streams.is_empty() {
@@ -194,6 +202,9 @@ pub fn mixer(app: &mut ValleApp, ui: &mut Ui) {
                                 }
                             });
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if !state.caps.per_app_output {
+                                    return;
+                                }
                                 let cur = state.sinks.iter().find(|d| d.id == s.sink).map(|d| d.description.clone()).unwrap_or_else(|| "Default".into());
                                 egui::ComboBox::from_id_salt(("sink", s.id))
                                     .selected_text(short(&cur, 16))
@@ -209,6 +220,10 @@ pub fn mixer(app: &mut ValleApp, ui: &mut Ui) {
                             });
                         });
                         ui.horizontal(|ui| {
+                            if !state.caps.per_app_volume {
+                                ui.label(RichText::new(format!("{} Playing now", ph::WAVEFORM)).size(12.5).color(ui::GREEN));
+                                return;
+                            }
                             let mut v = s.volume;
                             let boosted = v > 1.0;
                             let col = if boosted { ui::ORANGE } else { ui::ACCENT };
@@ -281,6 +296,9 @@ fn device_controls(app: &mut ValleApp, ui: &mut Ui, state: &mixer::MixerState, o
                 }
             }
         });
+    if !state.caps.switch_default {
+        ui.label(caption("Choosing another device opens the system's Sound settings."));
+    }
     if let Some(d) = current {
         ui.horizontal(|ui| {
             let mut v = d.volume;

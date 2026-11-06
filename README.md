@@ -13,7 +13,9 @@ macOS menu-bar utility collection (GPL-3.0-or-later).
 | Disks: free space, read/write activity | ✓ | ✓ | ✓ |
 | Battery: charge, health, cycles, time left, power draw | ✓ | ✓ | ✓ |
 | Keep awake (timer, keep display on) | ✓ | ✓ | ✓ |
-| Volume mixer per app, output switcher, microphone mute | later | ✓ (PulseAudio / PipeWire) | later |
+| Volume mixer: per-app volume and mute | ✓ (WASAPI sessions, up to 100 %) | ✓ (PulseAudio / PipeWire, boost to 200 %) | apps playing are listed; per-app volume next |
+| Output and microphone: volume, mute, default device | ✓ (device switch opens Sound settings) | ✓ | ✓ (CoreAudio) |
+| Per-app output device | — | ✓ | — |
 | Clipboard history, auto clear, clean URL (manual + automatic) | ✓ | ✓ | ✓ |
 | Snippets (copy with variables), Scratchpad | ✓ | ✓ | ✓ |
 | Quit apps, Port manager, Cleaner (moves to trash) | ✓ | ✓ | ✓ |
@@ -24,6 +26,9 @@ macOS menu-bar utility collection (GPL-3.0-or-later).
 | Command bar app search and launch | ✓ (Start Menu) | ✓ (.desktop, Flatpak) | ✓ (/Applications) |
 | Timer with notification | ✓ | ✓ | ✓ |
 | Open at login | ✓ | ✓ (XDG autostart) | ✓ |
+| Package manager, App updates, Uninstaller | ✓ (winget) | ✓ (Flatpak, Homebrew) | ✓ (Homebrew) |
+| Media tools: convert, resize and compress images | ✓ | ✓ | ✓ |
+| Paste as plain text | ✓ | ✓ | ✓ |
 | Settings with Features hub, bundles, platform support table | ✓ | ✓ | ✓ |
 
 Valler draws its own frameless, rounded window on every platform: drag it by the

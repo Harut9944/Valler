@@ -31,6 +31,10 @@ pub enum Sub {
     QuickToggles,
     CleaningMode,
     Timer,
+    Packages,
+    Uninstaller,
+    AppUpdates,
+    Media,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -118,6 +122,19 @@ pub struct ValleApp {
     pub timer_label: String,
 
     pub launch_at_login: Option<bool>,
+
+    pub pkg: crate::packages::Shared,
+    pub pkg_tab: u8,
+    pub pkg_tab_forced: bool,
+    pub pkg_query: String,
+    pub pkg_filter: String,
+    pub pkg_confirm: Option<(crate::packages::Package, crate::packages::Op)>,
+
+    pub media: crate::media::Shared,
+    pub media_files: Vec<std::path::PathBuf>,
+    pub media_format: crate::media::Format,
+    pub media_max: u32,
+    pub media_quality: u8,
 }
 
 impl ValleApp {
@@ -189,6 +206,17 @@ impl ValleApp {
             timer_minutes: 25,
             timer_label: String::new(),
             launch_at_login: None,
+            pkg: Arc::new(Mutex::new(Default::default())),
+            pkg_tab: 0,
+            pkg_tab_forced: false,
+            pkg_query: String::new(),
+            pkg_filter: String::new(),
+            pkg_confirm: None,
+            media: Arc::new(Mutex::new(Default::default())),
+            media_files: Vec::new(),
+            media_format: crate::media::Format::Jpeg,
+            media_max: 0,
+            media_quality: 82,
             store,
             opts,
         };
@@ -207,6 +235,9 @@ impl ValleApp {
         if let Some(sub) = app.opts.tab.as_deref().and_then(sub_from_id) {
             app.tab = Tab::Utilities;
             app.sub = Some(sub);
+            if app.opts.tab.as_deref() == Some("updates") {
+                app.pkg_tab = 1;
+            }
             if sub == Sub::Timer && app.demo {
                 app.timer_total = Duration::from_secs(25 * 60);
                 app.timer_end = Some(Instant::now() + Duration::from_secs(18 * 60 + 42));
@@ -523,6 +554,10 @@ pub fn sub_from_id(id: &str) -> Option<Sub> {
         "toggles" => Sub::QuickToggles,
         "cleaning" => Sub::CleaningMode,
         "timer" => Sub::Timer,
+        "packages" => Sub::Packages,
+        "updates" => Sub::AppUpdates,
+        "uninstaller" => Sub::Uninstaller,
+        "media" => Sub::Media,
         _ => return None,
     })
 }
@@ -533,6 +568,10 @@ pub fn sub_title(s: Sub) -> &'static str {
         Sub::QuickToggles => "Quick toggles",
         Sub::CleaningMode => "Cleaning mode",
         Sub::Timer => "Timer",
+        Sub::Packages => "Package manager",
+        Sub::Uninstaller => "Uninstaller",
+        Sub::AppUpdates => "App updates",
+        Sub::Media => "Media",
         Sub::Clipboard => "Clipboard",
         Sub::Snippets => "Snippets",
         Sub::Scratchpad => "Scratchpad",

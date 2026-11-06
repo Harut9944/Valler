@@ -29,6 +29,10 @@ pub const TOOLS: &[Tool] = &[
     Tool { sub: Sub::QuitApps, feature: "quit_apps", icon: ph::X_SQUARE, name: "Quit apps", desc: "See what is running and quit or force quit it." },
     Tool { sub: Sub::Ports, feature: "ports", icon: ph::PLUGS_CONNECTED, name: "Port manager", desc: "Find programs listening on network ports and stop them." },
     Tool { sub: Sub::Cleaner, feature: "cleaner", icon: ph::SPARKLE, name: "Cleaner", desc: "Caches, logs and temporary files." },
+    Tool { sub: Sub::Packages, feature: "packages", icon: ph::PACKAGE, name: "Package manager", desc: "Search, install, update and remove apps without a terminal." },
+    Tool { sub: Sub::Media, feature: "media", icon: ph::IMAGES, name: "Media", desc: "Convert, resize and compress images locally." },
+    Tool { sub: Sub::AppUpdates, feature: "app_updates", icon: ph::ARROW_CIRCLE_UP, name: "App updates", desc: "Check apps from your stores and update them together." },
+    Tool { sub: Sub::Uninstaller, feature: "uninstaller", icon: ph::TRASH, name: "Uninstaller", desc: "Removes apps you installed from an app store or package manager." },
     Tool { sub: Sub::Timer, feature: "timer", icon: ph::TIMER, name: "Timer", desc: "Countdown with a notification when time is up." },
     Tool { sub: Sub::CleaningMode, feature: "cleaning_mode", icon: ph::KEYBOARD, name: "Cleaning mode", desc: "Locks the keyboard so you can clean safely." },
 ];
@@ -56,6 +60,7 @@ pub fn utilities(app: &mut ValleApp, ui: &mut Ui) {
         });
         if r.clicked() {
             app.sub = Some(t.sub);
+            app.pkg_tab_forced = false;
             if t.sub == Sub::CommandBar {
                 app.cmd_focus = true;
             }
@@ -79,6 +84,10 @@ pub fn sub_view(app: &mut ValleApp, ui: &mut Ui, ctx: &egui::Context, sub: Sub) 
         Sub::QuickToggles => crate::tools_extra::quick_toggles_view(app, ui, ctx),
         Sub::CleaningMode => crate::tools_extra::cleaning_view(app, ui),
         Sub::Timer => crate::tools_extra::timer_view(app, ui),
+        Sub::Packages => crate::tools_more::packages_view(app, ui, ctx, None),
+        Sub::Uninstaller => crate::tools_more::packages_view(app, ui, ctx, Some(0)),
+        Sub::AppUpdates => crate::tools_more::packages_view(app, ui, ctx, Some(1)),
+        Sub::Media => crate::tools_more::media_view(app, ui, ctx),
     }
 }
 
@@ -177,6 +186,9 @@ fn clipboard(app: &mut ValleApp, ui: &mut Ui, ctx: &egui::Context) {
             app.toast("Clipboard emptied");
         }
     });
+    if app.store.is_installed("paste_plain") && ui::soft_button(ui, format!("{} Make clipboard plain text", ph::TEXT_T)).on_hover_text("Removes formatting so the next paste is plain text").clicked() {
+        make_plain(app, ctx);
+    }
 }
 
 // ------------------------------------------------------------- snippets
@@ -580,5 +592,16 @@ fn cleaner_view(app: &mut ValleApp, ui: &mut Ui, ctx: &egui::Context) {
                 }
             }
         }
+    }
+}
+
+/// Re-puts the clipboard text without formatting (Paste as plain text).
+pub fn make_plain(app: &mut ValleApp, ctx: &egui::Context) {
+    match arboard::Clipboard::new().and_then(|mut c| c.get_text()) {
+        Ok(t) if !t.is_empty() => {
+            app.copy_text(ctx, t);
+            app.toast("Clipboard is now plain text");
+        }
+        _ => app.toast("There's no text on the clipboard"),
     }
 }

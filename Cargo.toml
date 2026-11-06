@@ -11,11 +11,12 @@ dirs = "7.0.0"
 eframe = "0.36"
 egui = "0.36"
 egui-phosphor = "0.14"
-image = { version = "0.25.10", default-features = false, features = ["png"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp", "tiff"] }
 keepawake = "0.6.1"
 local-ip-address = "0.6.13"
 netstat2 = "0.11.2"
 notify-rust = "4.18.2"
+rfd = "0.17.2"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 starship-battery = "0.12.0"
@@ -28,3 +29,16 @@ url = "2.5.8"
 opt-level = 3
 lto = "thin"
 strip = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Devices_FunctionDiscovery",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Ole",
+    "Win32_System_Variant",
+    "Win32_UI_Shell_PropertiesSystem",
+] }

@@ -1,6 +1,23 @@
 //! Volume mixer. On Linux it talks to PulseAudio or PipeWire (pipewire-pulse),
-//! which both GNOME and KDE use, through `pactl`. Other systems report that
-//! per-app control is not available yet.
+//! which both GNOME and KDE use, through `pactl`. On Windows it uses WASAPI
+//! audio sessions (see mixer_win.rs) and on macOS CoreAudio (mixer_mac.rs).
+
+/// What the current system lets the mixer do; the UI hides the rest.
+#[derive(Clone, Copy, Debug)]
+pub struct Caps {
+    pub per_app_volume: bool,
+    pub per_app_output: bool,
+    /// Volume above 100 %.
+    pub boost: bool,
+    /// Change the default output/input device from Valler.
+    pub switch_default: bool,
+}
+
+impl Default for Caps {
+    fn default() -> Self {
+        Self { per_app_volume: true, per_app_output: true, boost: true, switch_default: true }
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct Stream {
@@ -25,6 +42,7 @@ pub struct Device {
 pub struct MixerState {
     pub available: bool,
     pub message: Option<String>,
+    pub caps: Caps,
     pub streams: Vec<Stream>,
     pub sinks: Vec<Device>,
     pub sources: Vec<Device>,
@@ -36,6 +54,7 @@ pub fn demo() -> MixerState {
     MixerState {
         available: true,
         message: None,
+        caps: Caps::default(),
         streams: vec![
             Stream { id: 1, app: "Chat app".into(), media: "Voice call".into(), volume: 0.29, muted: false, sink: 1 },
             Stream { id: 2, app: "Music player".into(), media: "Playback".into(), volume: 1.87, muted: false, sink: 1 },
@@ -127,6 +146,7 @@ mod imp {
         MixerState {
             available: true,
             message: None,
+            caps: Caps::default(),
             streams,
             sinks: devices("sinks"),
             sources: devices("sources"),
@@ -168,19 +188,19 @@ mod imp {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(target_os = "windows")]
+#[path = "mixer_win.rs"]
+mod imp;
+
+#[cfg(target_os = "macos")]
+#[path = "mixer_mac.rs"]
+mod imp;
+
+#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
 mod imp {
     use super::*;
     pub fn read() -> MixerState {
-        MixerState {
-            available: false,
-            message: Some(if cfg!(target_os = "windows") {
-                "Per-app volume for Windows is coming in a later version. Use the Volume mixer in Windows sound settings for now.".into()
-            } else {
-                "Per-app volume on macOS needs an audio capture permission and is coming in a later version.".into()
-            }),
-            ..Default::default()
-        }
+        MixerState { available: false, message: Some("The mixer isn't available on this system.".into()), ..Default::default() }
     }
     pub fn set_stream_volume(_: u32, _: f32) {}
     pub fn set_stream_mute(_: u32, _: bool) {}

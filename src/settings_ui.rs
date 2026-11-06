@@ -25,6 +25,8 @@ const PAGES: &[(&str, &[(SettingsPage, &str, &str)])] = &[
 ];
 
 pub fn show(app: &mut ValleApp, ui: &mut Ui, _ctx: &egui::Context) {
+    // The whole window, measured before any panel takes its share.
+    let window = ui.max_rect();
     let r = ui::WINDOW_RADIUS;
     let side_fill = Color32::from_rgb(0x22, 0x22, 0x25);
     egui::Panel::left("settings-sidebar").show_separator_line(false)
@@ -49,12 +51,13 @@ pub fn show(app: &mut ValleApp, ui: &mut Ui, _ctx: &egui::Context) {
         .exact_size(40.0)
         .frame(egui::Frame::new().inner_margin(Margin { left: 28, right: 12, top: 8, bottom: 0 }))
         .show(ui, |ui| {
-            let bar = ui.max_rect().expand2(vec2(28.0, 8.0));
+            // Span the title bar from the sidebar to the real right edge of the window,
+            // so the window buttons sit inside the rounded border.
+            let top = ui.max_rect();
+            let bar = egui::Rect::from_min_max(egui::pos2(top.left() - 28.0, window.top()), egui::pos2(window.right(), top.bottom()));
             ui::drag_area(ui, bar, "settings-drag", true);
             ui.label(RichText::new("Valler Settings").font(ui::bold(13.5)).color(ui::MUTED));
-            if !app.demo {
-                close = ui::window_buttons(ui, bar, "settings");
-            }
+            close = ui::window_buttons(ui, bar.shrink2(vec2(6.0, 0.0)).translate(vec2(-2.0, 2.0)), "settings");
         });
     if close {
         app.settings_open = false;

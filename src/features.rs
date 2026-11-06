@@ -106,6 +106,7 @@ pub const FEATURES: &[Feature] = &[
     Feature { id: "clipboard", group: Group::ClipboardFiles, name: "Clipboard history", desc: "Keeps copied text so you can reuse it later. Everything stays on this computer", icon: ph::CLIPBOARD_TEXT, support: Support::Partial("Text only for now; images and files come later"), energy: "Checks twice a second", switchable: true },
     Feature { id: "clip_autoclear", group: Group::ClipboardFiles, name: "Auto clear clipboard", desc: "Empties the clipboard a while after you copy, keeping saved history", icon: ph::BROOM, support: Support::Everywhere, energy: "Nothing at rest", switchable: true },
     Feature { id: "url_clean", group: Group::ClipboardFiles, name: "Clean URL", desc: "Removes tracking parameters from copied links, by hand or automatically", icon: ph::LINK, support: Support::Everywhere, energy: "Nothing at rest", switchable: true },
+    Feature { id: "paste_plain", group: Group::ClipboardFiles, name: "Paste as plain text", desc: "Strips formatting from what you copied so it pastes as plain text", icon: ph::TEXT_T, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
     Feature { id: "snippets", group: Group::ClipboardFiles, name: "Text snippets", desc: "Saved text with date, time and clipboard variables, ready to copy", icon: ph::TEXT_AA, support: Support::Partial("Typing a trigger to expand it comes later; copy from the library for now"), energy: "Nothing at rest", switchable: false },
     Feature { id: "shelf", group: Group::ClipboardFiles, name: "Shelf", desc: "Park files, text and links while dragging", icon: ph::TRAY, support: Support::Later, energy: "Listens to the mouse", switchable: true },
     // Tools
@@ -118,8 +119,10 @@ pub const FEATURES: &[Feature] = &[
     Feature { id: "timer", group: Group::Tools, name: "Timer", desc: "A countdown with a notification when it ends, for focus sessions, tea or breaks", icon: ph::TIMER, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
     Feature { id: "cleaning_mode", group: Group::Tools, name: "Cleaning mode", desc: "Covers the screen and swallows typing while you wipe the keyboard and display", icon: ph::KEYBOARD, support: Support::Partial("System shortcuts such as Alt+Tab or the Windows key still reach the system"), energy: "Nothing at rest", switchable: false },
     Feature { id: "screenshot", group: Group::Tools, name: "Screen capture", desc: "Screenshots, recordings, text recognition and color picking", icon: ph::CAMERA, support: Support::Later, energy: "Nothing at rest", switchable: false },
-    Feature { id: "uninstaller", group: Group::Tools, name: "Uninstaller", desc: "Remove apps together with the leftovers they leave behind", icon: ph::TRASH, support: Support::Later, energy: "Nothing at rest", switchable: false },
-    Feature { id: "packages", group: Group::Tools, name: "Package manager", desc: "Search, install and update packages without a terminal", icon: ph::PACKAGE, support: Support::Later, energy: "Nothing at rest", switchable: false },
+    Feature { id: "uninstaller", group: Group::Tools, name: "Uninstaller", desc: "Remove apps you installed from Flatpak, Homebrew or winget", icon: ph::TRASH, support: Support::Partial("Apps installed with the system package manager (apt, dnf, pacman) or by hand are not listed yet"), energy: "Nothing at rest", switchable: false },
+    Feature { id: "packages", group: Group::Tools, name: "Package manager", desc: "Search, install, update and remove apps without a terminal", icon: ph::PACKAGE, support: Support::Partial("Uses Flatpak or Homebrew on Linux, Homebrew on macOS and winget on Windows"), energy: "Nothing at rest", switchable: false },
+    Feature { id: "app_updates", group: Group::Tools, name: "App updates", desc: "See which apps have updates and install them together", icon: ph::ARROW_CIRCLE_UP, support: Support::Partial("Covers apps from Flatpak, Homebrew and winget"), energy: "Nothing at rest", switchable: false },
+    Feature { id: "media", group: Group::Tools, name: "Media tools", desc: "Convert, resize and compress images locally", icon: ph::IMAGES, support: Support::Partial("Images only for now; video tools come later"), energy: "Nothing at rest", switchable: false },
     Feature { id: "island", group: Group::Tools, name: "Activity island", desc: "Music, timers, calendar and downloads in a floating island at the top", icon: ph::PILL, support: Support::Later, energy: "Nothing at rest", switchable: true },
     // Windows and taskbar
     Feature { id: "switcher", group: Group::WindowsDock, name: "App switcher", desc: "Switch between apps and windows with previews and search", icon: ph::STACK, support: Support::Later, energy: "Listens to the keyboard", switchable: true },
@@ -169,7 +172,7 @@ pub const PRESETS: &[Preset] = &[
         name: "Everyday tools",
         desc: "Clipboard history, snippets, scratchpad and link cleaning.",
         icon: ph::TOOLBOX,
-        features: &["clipboard", "clip_autoclear", "url_clean", "snippets", "scratchpad", "quit_apps", "ports", "cleaner", "command_bar", "quick_toggles", "cleaning_mode", "timer"],
+        features: &["clipboard", "clip_autoclear", "url_clean", "snippets", "scratchpad", "quit_apps", "ports", "cleaner", "command_bar", "quick_toggles", "cleaning_mode", "timer", "paste_plain", "media", "packages", "app_updates", "uninstaller"],
     },
     Preset {
         name: "Battery and quiet",
@@ -251,7 +254,7 @@ impl Tab {
             Tab::Network => &["monitor_network"],
             Tab::Disk => &["monitor_disk"],
             Tab::Power => &["monitor_power"],
-            Tab::Utilities => &["command_bar", "quick_toggles", "clipboard", "snippets", "scratchpad", "url_clean", "quit_apps", "ports", "cleaner", "timer", "cleaning_mode"],
+            Tab::Utilities => &["command_bar", "quick_toggles", "clipboard", "snippets", "scratchpad", "url_clean", "quit_apps", "ports", "cleaner", "timer", "cleaning_mode", "packages", "app_updates", "uninstaller", "media"],
             Tab::Controls => &["clipboard", "clip_autoclear", "url_clean"],
         }
     }
