@@ -3,6 +3,7 @@
 //! screenshot mode each live in their own file.
 
 mod automation;
+mod dimmer;
 mod background;
 mod lifecycle;
 mod nav;
@@ -12,8 +13,11 @@ mod window;
 
 pub use nav::*;
 use background::watch_config;
+pub(crate) use background::forget_images;
+pub use dimmer::MAX_DIM;
 
 use crate::LaunchOptions;
+use crate::ui;
 use crate::services::cleaner;
 use crate::services::clipboard::Watcher;
 use crate::core::features::Tab;
@@ -43,6 +47,9 @@ pub struct ValleApp {
     pub snap: Snapshot,
 
     pub awake: KeepAwake,
+    pub displays: crate::services::display::Shared,
+    pub display_ctl: Option<crate::services::display::Controller>,
+    pub displays_read: Option<Instant>,
     pub note_preview: bool,
     awake_checked: Option<Instant>,
 
@@ -119,9 +126,8 @@ pub struct ValleApp {
     pub shelf_selected: HashSet<u64>,
     pub shelf_floating: bool,
     pub shelf_note: String,
-    pub shelf_thumbs: std::collections::HashMap<u64, egui::TextureHandle>,
-    pub shelf_thumb_queue: crate::screens::tools::shelf::ThumbQueue,
-    pub shelf_thumb_requested: HashSet<u64>,
+    /// Image thumbnails shared by the Shelf and clipboard history.
+    pub thumbs: ui::Thumbs,
 
     pub tray: Option<crate::services::tray::Tray>,
     pub window_hidden: bool,
@@ -161,6 +167,9 @@ impl ValleApp {
             mon,
             snap: Snapshot::default(),
             awake,
+            displays: Default::default(),
+            display_ctl: None,
+            displays_read: None,
             note_preview: false,
             awake_checked: None,
             mixer: Arc::new(Mutex::new(MixerState::default())),
@@ -219,9 +228,7 @@ impl ValleApp {
             shelf_selected: HashSet::new(),
             shelf_floating: false,
             shelf_note: String::new(),
-            shelf_thumbs: Default::default(),
-            shelf_thumb_queue: Default::default(),
-            shelf_thumb_requested: HashSet::new(),
+            thumbs: Default::default(),
             tray: None,
             window_hidden: false,
             quitting: false,
@@ -264,6 +271,9 @@ impl ValleApp {
             if app.store.tray_enabled {
                 app.tray = crate::services::tray::Tray::new(&ctx);
             }
+            app.display_ctl = Some(crate::services::display::Controller::spawn(app.displays.clone()));
+        } else if let Ok(mut d) = app.displays.lock() {
+            d.screens = Some(crate::services::display::demo());
         }
         app
     }

@@ -101,10 +101,10 @@ pub const FEATURES: &[Feature] = &[
     Feature { id: "music_block", group: Group::Sound, name: "Music app blocker", desc: "Stop unwanted music app launches from media keys", icon: ph::MUSIC_NOTES, support: Support::Later, energy: "Listens to the keyboard", switchable: true },
     // Energy and display
     Feature { id: "keep_awake", group: Group::EnergyDisplay, name: "Keep awake", desc: "Keep the computer and display awake for a while, until you stop it, or automatically while chosen apps run or while plugged in", icon: ph::MOON_STARS, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
-    Feature { id: "brightness", group: Group::EnergyDisplay, name: "Displays", desc: "Brightness for every monitor, with hardware control where supported", icon: ph::SUN, support: Support::Later, energy: "Nothing at rest", switchable: false },
+    Feature { id: "brightness", group: Group::EnergyDisplay, name: "Displays", desc: "Brightness for built-in screens and external monitors, plus software dimming below the minimum", icon: ph::SUN, support: Support::Partial("Built-in screens on Linux and Windows and external monitors on Linux (ddcutil) change for real; elsewhere software dimming covers the screen"), energy: "Nothing at rest", switchable: false },
     Feature { id: "bluetooth_sleep", group: Group::EnergyDisplay, name: "Bluetooth on sleep", desc: "Turn Bluetooth off during sleep and back on at wake", icon: ph::BLUETOOTH, support: Support::Later, energy: "Nothing at rest", switchable: true },
     // Clipboard and files
-    Feature { id: "clipboard", group: Group::ClipboardFiles, name: "Clipboard history", desc: "Keeps copied text so you can reuse it later. Everything stays on this computer", icon: ph::CLIPBOARD_TEXT, support: Support::Partial("Text only for now; images and files come later"), energy: "Checks twice a second", switchable: true },
+    Feature { id: "clipboard", group: Group::ClipboardFiles, name: "Clipboard history", desc: "Keeps copied text, images and files so you can reuse them later. Everything stays on this computer", icon: ph::CLIPBOARD_TEXT, support: Support::Everywhere, energy: "Checks twice a second", switchable: true },
     Feature { id: "clip_autoclear", group: Group::ClipboardFiles, name: "Auto clear clipboard", desc: "Empties the clipboard a while after you copy, keeping saved history", icon: ph::BROOM, support: Support::Everywhere, energy: "Nothing at rest", switchable: true },
     Feature { id: "url_clean", group: Group::ClipboardFiles, name: "Clean URL", desc: "Removes tracking parameters from copied links, by hand or automatically", icon: ph::LINK, support: Support::Everywhere, energy: "Nothing at rest", switchable: true },
     Feature { id: "paste_plain", group: Group::ClipboardFiles, name: "Paste as plain text", desc: "Strips formatting from what you copied so it pastes as plain text", icon: ph::TEXT_T, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
@@ -167,7 +167,7 @@ pub const PRESETS: &[Preset] = &[
         name: "Essentials",
         desc: "Volume mixer, system monitor and keep awake.",
         icon: ph::STAR,
-        features: &["mixer", "mic_mute", "keep_awake", "monitor_cpu", "monitor_memory", "monitor_temps", "monitor_network", "monitor_disk", "monitor_power", "monitor_alerts", "tray_readouts"],
+        features: &["mixer", "mic_mute", "keep_awake", "brightness", "monitor_cpu", "monitor_memory", "monitor_temps", "monitor_network", "monitor_disk", "monitor_power", "monitor_alerts", "tray_readouts"],
     },
     Preset {
         name: "Everyday tools",
@@ -187,6 +187,7 @@ pub const PRESETS: &[Preset] = &[
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Tab {
     KeepAwake,
+    Displays,
     Mixer,
     System,
     Network,
@@ -197,8 +198,9 @@ pub enum Tab {
 }
 
 impl Tab {
-    pub const ALL: [Tab; 8] = [
+    pub const ALL: [Tab; 9] = [
         Tab::KeepAwake,
+        Tab::Displays,
         Tab::Mixer,
         Tab::System,
         Tab::Network,
@@ -210,6 +212,7 @@ impl Tab {
     pub fn id(self) -> &'static str {
         match self {
             Tab::KeepAwake => "keepawake",
+            Tab::Displays => "displays",
             Tab::Mixer => "mixer",
             Tab::System => "system",
             Tab::Network => "network",
@@ -225,6 +228,7 @@ impl Tab {
     pub fn title(self) -> &'static str {
         match self {
             Tab::KeepAwake => "Keep awake",
+            Tab::Displays => "Displays",
             Tab::Mixer => "Volume mixer",
             Tab::System => "System",
             Tab::Network => "Network",
@@ -237,6 +241,7 @@ impl Tab {
     pub fn icon(self) -> &'static str {
         match self {
             Tab::KeepAwake => ph::MOON_STARS,
+            Tab::Displays => ph::SUN_DIM,
             Tab::Mixer => ph::SLIDERS_HORIZONTAL,
             Tab::System => ph::CPU,
             Tab::Network => ph::GLOBE,
@@ -250,6 +255,7 @@ impl Tab {
     pub fn features(self) -> &'static [&'static str] {
         match self {
             Tab::KeepAwake => &["keep_awake"],
+            Tab::Displays => &["brightness"],
             Tab::Mixer => &["mixer", "mic_mute"],
             Tab::System => &["monitor_cpu", "monitor_memory", "monitor_temps"],
             Tab::Network => &["monitor_network"],

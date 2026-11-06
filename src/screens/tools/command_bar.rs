@@ -13,6 +13,8 @@ use egui_phosphor::regular as ph;
 
 enum CmdAction {
     Plain,
+    /// A clipboard history entry, copied back as text, image or files.
+    Clip(usize),
     Launch(crate::services::apps::AppEntry),
     Copy(String),
     Open(Sub),
@@ -111,13 +113,13 @@ fn command_rows(app: &ValleApp) -> Vec<CmdRow> {
         }
         if app.store.is_installed("clipboard") {
             let mut n = 0;
-            for e in &app.store.clip_history {
+            for (idx, e) in app.store.clip_history.iter().enumerate() {
                 if n >= 6 {
                     break;
                 }
-                if e.text.to_lowercase().contains(&ql) {
+                if e.haystack().contains(&ql) {
                     n += 1;
-                    rows.push(CmdRow { swatch: None, icon: ph::CLIPBOARD_TEXT, title: one_line(&e.text), detail: format!("Clipboard · {}", ago(e.at)), score: 200 - n, action: CmdAction::Copy(e.text.clone()) });
+                    rows.push(CmdRow { swatch: None, icon: ph::CLIPBOARD_TEXT, title: one_line(&e.text), detail: format!("Clipboard · {}", ago(e.at)), score: 200 - n, action: CmdAction::Clip(idx) });
                 }
             }
         }
@@ -204,6 +206,11 @@ pub fn command_bar_view(app: &mut ValleApp, ui: &mut Ui, ctx: &egui::Context) {
     let Some(row) = run.and_then(|i| rows.into_iter().nth(i)) else { return };
     match row.action {
         CmdAction::Plain => crate::screens::tools::make_plain(app, ctx),
+        CmdAction::Clip(i) => {
+            if let Some(e) = app.store.clip_history.get(i).cloned() {
+                crate::screens::tools::copy_entry(app, ctx, &e);
+            }
+        }
         CmdAction::Launch(a) => match crate::services::apps::launch(&a) {
             Ok(_) => app.toast(format!("Opening {}", a.name)),
             Err(e) => app.toast(format!("Couldn't open {}: {e}", a.name)),

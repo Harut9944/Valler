@@ -6,6 +6,7 @@ pub mod alerts;
 pub mod apps;
 pub mod autostart;
 pub mod cleaner;
+pub mod display;
 pub mod clipboard;
 pub mod command_bar;
 pub mod desktop_entry;

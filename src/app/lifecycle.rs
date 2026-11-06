@@ -49,6 +49,7 @@ impl eframe::App for ValleApp {
             self.toast(msg);
             self.qt_checked = None;
         }
+        self.dim_overlay(&ctx);
         if self.cleaning {
             crate::screens::tools::cleaning_viewport(self, &ctx);
         }

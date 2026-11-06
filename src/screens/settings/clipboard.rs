@@ -26,6 +26,12 @@ pub(crate) fn clipboard(app: &mut ValleApp, ui: &mut Ui) {
             }
         });
         ui::separator(ui);
+        setting_row(ui, "Keep copied images", "Saved as pictures in Valler's own folder and removed when they leave the history.", |ui| {
+            if ui::toggle(ui, &mut app.store.clip_images).changed() {
+                app.store.dirty_flag = true;
+            }
+        });
+        ui::separator(ui);
         let mut ac = app.store.is_on("clip_autoclear");
         setting_row(ui, "Clear the clipboard automatically", "Empties the system clipboard a while after you copy. History is kept.", |ui| {
             ui::toggle(ui, &mut ac);

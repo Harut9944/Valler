@@ -1,44 +1,13 @@
 //! The tile grid (with image thumbnails and the right-click menu) and the action bar.
 
 use crate::app::ValleApp;
-use crate::services::shelf::{self, Item, Kind};
+use crate::services::shelf::{self, Kind};
 use crate::ui::{self, fmt_bytes};
 use egui::{Color32, CornerRadius, RichText, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use egui_phosphor::regular as ph;
 use super::*;
 
 // ------------------------------------------------------------- thumbnails
-
-pub(crate) fn thumbnail(app: &mut ValleApp, ctx: &egui::Context, it: &Item) -> Option<egui::TextureHandle> {
-    if let Some(t) = app.shelf_thumbs.get(&it.id) {
-        return Some(t.clone());
-    }
-    // Upload finished decodes.
-    let ready: Vec<(u64, egui::ColorImage)> = app.shelf_thumb_queue.lock().map(|mut q| std::mem::take(&mut *q)).unwrap_or_default();
-    for (id, img) in ready {
-        let tex = ctx.load_texture(format!("shelf-thumb-{id}"), img, egui::TextureOptions::LINEAR);
-        app.shelf_thumbs.insert(id, tex);
-    }
-    if let Some(t) = app.shelf_thumbs.get(&it.id) {
-        return Some(t.clone());
-    }
-    if it.kind == Kind::Image && app.shelf_thumb_requested.insert(it.id)
-        && let Some(path) = it.path.clone() {
-            let q = app.shelf_thumb_queue.clone();
-            let (id, ctx) = (it.id, ctx.clone());
-            std::thread::spawn(move || {
-                if let Ok(img) = image::open(&path) {
-                    let t = img.thumbnail(192, 192).to_rgba8();
-                    let ci = egui::ColorImage::from_rgba_unmultiplied([t.width() as usize, t.height() as usize], t.as_raw());
-                    if let Ok(mut q) = q.lock() {
-                        q.push((id, ci));
-                    }
-                    ctx.request_repaint();
-                }
-            });
-        }
-    None
-}
 
 // ------------------------------------------------------------- tiles
 
@@ -77,7 +46,10 @@ pub(crate) fn tiles(app: &mut ValleApp, ui: &mut Ui, ctx: &egui::Context, tile: 
                 let fill = if selected { ui::ACCENT_SOFT } else if resp.hovered() { ui::CARD_HOVER } else { Color32::from_rgb(0x30, 0x30, 0x34) };
                 p.rect(rect, CornerRadius::same(10), fill, Stroke::new(if selected { 1.5 } else { 1.0 }, if selected { ui::ACCENT } else { ui::BORDER }), StrokeKind::Inside);
                 let art = egui::Rect::from_min_size(rect.min + vec2(8.0, 8.0), vec2(tile - 16.0, tile - 16.0));
-                let tex = if exists { thumbnail(app, ctx, it) } else { None };
+                let tex = match (&it.path, exists && it.kind == Kind::Image) {
+                    (Some(p), true) => app.thumbs.get(ctx, p),
+                    _ => None,
+                };
                 if let Some(t) = tex {
                     let size = t.size_vec2();
                     let scale = (art.width() / size.x).min(art.height() / size.y);

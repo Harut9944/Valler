@@ -145,6 +145,7 @@ impl ValleApp {
                         Some(sub) => crate::screens::tools::sub_view(self, ui, ctx, sub),
                         None => match self.tab {
                             Tab::KeepAwake => crate::screens::tabs::keep_awake(self, ui),
+                            Tab::Displays => crate::screens::tabs::displays(self, ui, ctx),
                             Tab::Mixer => crate::screens::tabs::mixer(self, ui),
                             Tab::System => crate::screens::tabs::system(self, ui),
                             Tab::Network => crate::screens::tabs::network(self, ui, ctx),
