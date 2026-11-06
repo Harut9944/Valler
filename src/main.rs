@@ -37,6 +37,14 @@ fn main() -> eframe::Result {
             println!("Valler {}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
+        cli::Command::ExportIcon { path, size } => {
+            let rgba = ui::icon_rgba(size, None);
+            if let Err(e) = image::save_buffer(&path, &rgba, size, size, image::ExtendedColorType::Rgba8) {
+                eprintln!("Could not write {}: {e}", path.display());
+                std::process::exit(1);
+            }
+            return Ok(());
+        }
     };
     let viewport = egui::ViewportBuilder::default()
         .with_title("Valler")

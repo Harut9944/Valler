@@ -106,18 +106,18 @@ fn every_settings_page_draws() {
         SettingsPage::About,
     ] {
         app.settings_page = p;
-        let n = draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::screens::settings::show(a, ui, c));
+        let n = draw(&ctx, &mut app, SETTINGS, crate::screens::settings::show);
         assert!(n > 20, "{p:?} painted only {n} shapes");
     }
     app.settings_page = SettingsPage::Features;
     app.hub_tab_support = true;
-    assert!(draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::screens::settings::show(a, ui, c)) > 50);
+    assert!(draw(&ctx, &mut app, SETTINGS, crate::screens::settings::show) > 50);
 }
 
 #[test]
 fn floating_shelf_draws_with_sample_items() {
     let (ctx, mut app) = demo_app();
-    let n = draw(&ctx, &mut app, Vec2::new(372.0, 330.0), |a, ui, c| crate::screens::tools::shelf::floating_contents(a, ui, c));
+    let n = draw(&ctx, &mut app, Vec2::new(372.0, 330.0), crate::screens::tools::shelf::floating_contents);
     assert!(n > 20);
     assert_eq!(app.store.shelf_items.len(), 5);
 }
@@ -195,7 +195,7 @@ fn keep_awake_automation_settings_draw() {
     app.store.keep_awake_auto.enabled = true;
     app.store.keep_awake_auto.apps_enabled = true;
     app.store.keep_awake_auto.apps = vec!["Video call".into()];
-    assert!(draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::screens::settings::show(a, ui, c)) > 30);
+    assert!(draw(&ctx, &mut app, SETTINGS, crate::screens::settings::show) > 30);
 }
 
 #[test]

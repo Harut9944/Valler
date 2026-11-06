@@ -1,7 +1,7 @@
 //! Tests for the calculator, unit conversion and matching.
 
 #[cfg(test)]
-mod tests {
+mod basics {
     use crate::services::command_bar::*;
     #[test]
     fn math() {

@@ -19,6 +19,9 @@ pub enum Command {
     Run(LaunchOptions),
     Help,
     Version,
+    /// Write the app icon as a PNG (used by the release scripts for the
+    /// macOS .app, the Linux launcher icon and the Windows package).
+    ExportIcon { path: PathBuf, size: u32 },
 }
 
 pub const HELP: &str = "Usage: valler [--tab <name>] [--settings] [--screenshot <file.png>]
@@ -28,6 +31,8 @@ pub const HELP: &str = "Usage: valler [--tab <name>] [--settings] [--screenshot 
                         clipboard, timer, packages, media, …)
   --settings            open the Settings window (with --tab: a page such as monitor)
   --screenshot <file>   draw ~120 frames, save the window as PNG and exit
+  --export-icon <file.png> [size]
+                        write the app icon as a PNG (default 1024 px) and exit
   -h, --help            show this help
   -V, --version         show the version";
 
@@ -41,6 +46,11 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Command {
             "--settings" => opts.settings = true,
             "-h" | "--help" => return Command::Help,
             "-V" | "--version" => return Command::Version,
+            "--export-icon" => {
+                let Some(path) = args.next() else { return Command::Help };
+                let size = args.next().and_then(|s| s.parse().ok()).filter(|s| (16..=2048).contains(s)).unwrap_or(1024);
+                return Command::ExportIcon { path: PathBuf::from(path), size };
+            }
             _ => {} // Unknown flags are ignored, so launchers adding their own never break Valler.
         }
     }
@@ -81,6 +91,14 @@ mod tests {
         assert_eq!(parse(args("--unknown --tab shelf")), Command::Run(LaunchOptions { tab: Some("shelf".into()), ..Default::default() }));
         // A flag missing its value is simply unset.
         assert_eq!(parse(args("--tab")), Command::Run(LaunchOptions::default()));
+    }
+
+    #[test]
+    fn export_icon_option() {
+        assert_eq!(parse(args("--export-icon icon.png 256")), Command::ExportIcon { path: "icon.png".into(), size: 256 });
+        assert_eq!(parse(args("--export-icon icon.png")), Command::ExportIcon { path: "icon.png".into(), size: 1024 });
+        assert_eq!(parse(args("--export-icon icon.png 99999")), Command::ExportIcon { path: "icon.png".into(), size: 1024 });
+        assert_eq!(parse(args("--export-icon")), Command::Help);
     }
 
     #[test]
