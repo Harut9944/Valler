@@ -35,6 +35,7 @@ pub enum Sub {
     Uninstaller,
     AppUpdates,
     Media,
+    Shelf,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -136,6 +137,13 @@ pub struct ValleApp {
     pub media_max: u32,
     pub media_quality: u8,
 
+    pub shelf_selected: HashSet<u64>,
+    pub shelf_floating: bool,
+    pub shelf_note: String,
+    pub shelf_thumbs: std::collections::HashMap<u64, egui::TextureHandle>,
+    pub shelf_thumb_queue: crate::shelf_ui::ThumbQueue,
+    pub shelf_thumb_requested: HashSet<u64>,
+
     pub tray: Option<crate::tray::Tray>,
     pub window_hidden: bool,
     pub quitting: bool,
@@ -221,6 +229,12 @@ impl ValleApp {
             media_format: crate::media::Format::Jpeg,
             media_max: 0,
             media_quality: 82,
+            shelf_selected: HashSet::new(),
+            shelf_floating: false,
+            shelf_note: String::new(),
+            shelf_thumbs: Default::default(),
+            shelf_thumb_queue: Default::default(),
+            shelf_thumb_requested: HashSet::new(),
             tray: None,
             window_hidden: false,
             quitting: false,
@@ -624,6 +638,12 @@ impl ValleApp {
                     self.settings_open = true;
                     self.show_window(ctx);
                 }
+                Shelf => {
+                    if self.store.is_installed("shelf") {
+                        self.shelf_floating = !self.shelf_floating;
+                        ctx.request_repaint();
+                    }
+                }
                 Quit => self.quit(ctx),
             }
         }
@@ -674,6 +694,7 @@ pub fn sub_from_id(id: &str) -> Option<Sub> {
         "updates" => Sub::AppUpdates,
         "uninstaller" => Sub::Uninstaller,
         "media" => Sub::Media,
+        "shelf" => Sub::Shelf,
         _ => return None,
     })
 }
@@ -688,6 +709,7 @@ pub fn sub_title(s: Sub) -> &'static str {
         Sub::Uninstaller => "Uninstaller",
         Sub::AppUpdates => "App updates",
         Sub::Media => "Media",
+        Sub::Shelf => "Shelf",
         Sub::Clipboard => "Clipboard",
         Sub::Snippets => "Snippets",
         Sub::Scratchpad => "Scratchpad",
@@ -751,6 +773,9 @@ impl eframe::App for ValleApp {
         if self.cleaning {
             crate::tools_extra::cleaning_viewport(self, &ctx);
         }
+        if self.shelf_floating && self.store.is_installed("shelf") {
+            crate::shelf_ui::floating(self, &ctx);
+        }
         self.awake.tick();
         self.drain_clipboard();
         if self.tab == Tab::Mixer && self.sub.is_none() {
@@ -762,7 +787,9 @@ impl eframe::App for ValleApp {
 
         let settings_inline = self.demo && self.opts.settings;
         ui::window_surface(ui);
-        if settings_inline {
+        if self.demo && self.opts.tab.as_deref() == Some("shelffloat") {
+            crate::shelf_ui::floating_contents(self, ui, &ctx);
+        } else if settings_inline {
             crate::settings_ui::show(self, ui, &ctx);
         } else {
             self.panel(ui, &ctx);
@@ -796,6 +823,7 @@ impl eframe::App for ValleApp {
                 ctx.request_repaint_after(Duration::from_millis(900));
             }
         }
+        crate::shelf_ui::main_window_drops(self, &ctx);
         self.handle_screenshot(&ctx);
     }
 

@@ -22,6 +22,7 @@ pub struct Tool {
 pub const TOOLS: &[Tool] = &[
     Tool { sub: Sub::CommandBar, feature: "command_bar", icon: ph::MAGNIFYING_GLASS, name: "Command bar", desc: "Search tools, clipboard, snippets and notes. Calculate and convert units." },
     Tool { sub: Sub::QuickToggles, feature: "quick_toggles", icon: ph::TOGGLE_LEFT, name: "Quick toggles", desc: "Dark mode, lock screen, display off, screen saver and empty the trash." },
+    Tool { sub: Sub::Shelf, feature: "shelf", icon: ph::TRAY, name: "Shelf", desc: "Park files, text and links for a moment, then copy or move them where they belong." },
     Tool { sub: Sub::Clipboard, feature: "clipboard", icon: ph::CLIPBOARD_TEXT, name: "Clipboard", desc: "Stores copied text so you can reuse it later. Everything stays local and can be cleared anytime." },
     Tool { sub: Sub::Snippets, feature: "snippets", icon: ph::TEXT_AA, name: "Snippets", desc: "Saved text with date, time and clipboard variables, one click to copy." },
     Tool { sub: Sub::Scratchpad, feature: "scratchpad", icon: ph::NOTE_PENCIL, name: "Scratchpad", desc: "Autosaved notes in tabs." },
@@ -52,6 +53,9 @@ pub fn utilities(app: &mut ValleApp, ui: &mut Ui) {
                     if let Some(left) = app.timer_end.map(|e| e.saturating_duration_since(std::time::Instant::now())).or(app.timer_paused) {
                         ui.label(RichText::new(crate::tools_extra::fmt_clock(left)).font(ui::bold(13.0)).color(ui::ACCENT));
                     }
+                }
+                if t.sub == Sub::Shelf && !app.store.shelf_items.is_empty() {
+                    ui.label(RichText::new(format!("{}", app.store.shelf_items.len())).font(ui::bold(12.5)).color(ui::ACCENT));
                 }
                 if t.sub == Sub::Clipboard {
                     ui.label(RichText::new(format!("{} saved", app.store.clip_history.len())).size(12.0).color(ui::FAINT));
@@ -88,6 +92,7 @@ pub fn sub_view(app: &mut ValleApp, ui: &mut Ui, ctx: &egui::Context, sub: Sub) 
         Sub::Uninstaller => crate::tools_more::packages_view(app, ui, ctx, Some(0)),
         Sub::AppUpdates => crate::tools_more::packages_view(app, ui, ctx, Some(1)),
         Sub::Media => crate::tools_more::media_view(app, ui, ctx),
+        Sub::Shelf => crate::shelf_ui::shelf_view(app, ui, ctx),
     }
 }
 

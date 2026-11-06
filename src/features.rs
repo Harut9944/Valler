@@ -109,7 +109,7 @@ pub const FEATURES: &[Feature] = &[
     Feature { id: "url_clean", group: Group::ClipboardFiles, name: "Clean URL", desc: "Removes tracking parameters from copied links, by hand or automatically", icon: ph::LINK, support: Support::Everywhere, energy: "Nothing at rest", switchable: true },
     Feature { id: "paste_plain", group: Group::ClipboardFiles, name: "Paste as plain text", desc: "Strips formatting from what you copied so it pastes as plain text", icon: ph::TEXT_T, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
     Feature { id: "snippets", group: Group::ClipboardFiles, name: "Text snippets", desc: "Saved text with date, time and clipboard variables, ready to copy", icon: ph::TEXT_AA, support: Support::Partial("Typing a trigger to expand it comes later; copy from the library for now"), energy: "Nothing at rest", switchable: false },
-    Feature { id: "shelf", group: Group::ClipboardFiles, name: "Shelf", desc: "Park files, text and links while dragging", icon: ph::TRAY, support: Support::Later, energy: "Listens to the mouse", switchable: true },
+    Feature { id: "shelf", group: Group::ClipboardFiles, name: "Shelf", desc: "Park files, folders, images, text and links for a moment, then copy, move or open them later. Also floats on top of other apps", icon: ph::TRAY, support: Support::Partial("Drop files onto it on Windows, macOS and X11; on Wayland paste with Ctrl+V or turn on drag support in its settings. Dragging items out to other apps comes later: use Copy and paste"), energy: "Nothing at rest", switchable: false },
     // Tools
     Feature { id: "scratchpad", group: Group::Tools, name: "Scratchpad", desc: "Autosaved notes in tabs, with export to a text file", icon: ph::NOTE_PENCIL, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
     Feature { id: "quit_apps", group: Group::Tools, name: "Quit apps", desc: "See running programs with their CPU and memory, and quit or force quit them", icon: ph::X_SQUARE, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
@@ -173,7 +173,7 @@ pub const PRESETS: &[Preset] = &[
         name: "Everyday tools",
         desc: "Clipboard history, snippets, scratchpad and link cleaning.",
         icon: ph::TOOLBOX,
-        features: &["clipboard", "clip_autoclear", "url_clean", "snippets", "scratchpad", "quit_apps", "ports", "cleaner", "command_bar", "quick_toggles", "cleaning_mode", "timer", "paste_plain", "media", "packages", "app_updates", "uninstaller"],
+        features: &["clipboard", "clip_autoclear", "url_clean", "snippets", "scratchpad", "quit_apps", "ports", "cleaner", "command_bar", "quick_toggles", "cleaning_mode", "timer", "paste_plain", "media", "packages", "app_updates", "uninstaller", "shelf"],
     },
     Preset {
         name: "Battery and quiet",
@@ -255,7 +255,7 @@ impl Tab {
             Tab::Network => &["monitor_network"],
             Tab::Disk => &["monitor_disk"],
             Tab::Power => &["monitor_power"],
-            Tab::Utilities => &["command_bar", "quick_toggles", "clipboard", "snippets", "scratchpad", "url_clean", "quit_apps", "ports", "cleaner", "timer", "cleaning_mode", "packages", "app_updates", "uninstaller", "media"],
+            Tab::Utilities => &["command_bar", "quick_toggles", "clipboard", "snippets", "scratchpad", "url_clean", "quit_apps", "ports", "shelf", "cleaner", "timer", "cleaning_mode", "packages", "app_updates", "uninstaller", "media"],
             Tab::Controls => &["clipboard", "clip_autoclear", "url_clean"],
         }
     }

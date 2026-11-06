@@ -22,6 +22,8 @@ mod packages;
 mod ports;
 mod quick_toggles;
 mod settings_ui;
+mod shelf;
+mod shelf_ui;
 mod snippets;
 mod speedtest;
 mod store;
@@ -74,6 +76,8 @@ fn main() -> eframe::Result {
     let opts = parse_args();
     let size = if opts.settings && opts.screenshot.is_some() {
         [1000.0, 700.0]
+    } else if opts.screenshot.is_some() && opts.tab.as_deref() == Some("shelffloat") {
+        [372.0, 330.0]
     } else {
         [400.0, 820.0]
     };
@@ -87,10 +91,20 @@ fn main() -> eframe::Result {
         .with_decorations(false)
         .with_transparent(true)
         .with_icon(ui::app_icon());
-    let native_options = eframe::NativeOptions {
+    #[allow(unused_mut)]
+    let mut native_options = eframe::NativeOptions {
         viewport,
         ..Default::default()
     };
+    // Linux Wayland can't accept dropped files through winit; the Shelf offers
+    // an opt-in XWayland mode that can.
+    #[cfg(target_os = "linux")]
+    if opts.screenshot.is_none() && store::Store::load(false).linux_x11 {
+        native_options.event_loop_builder = Some(Box::new(|b| {
+            use winit::platform::x11::EventLoopBuilderExtX11;
+            b.with_x11();
+        }));
+    }
     eframe::run_native(
         "Valler",
         native_options,

@@ -29,6 +29,7 @@ macOS menu-bar utility collection (GPL-3.0-or-later).
 | Package manager, App updates, Uninstaller | ✓ (winget) | ✓ (Flatpak, Homebrew) | ✓ (Homebrew) |
 | Media tools: convert, resize and compress images | ✓ | ✓ | ✓ |
 | Paste as plain text | ✓ | ✓ | ✓ |
+| Shelf: park files, folders, images, text and links; copy, move, open; floating on-top window | ✓ (drop files) | ✓ (drop on X11; paste or opt-in XWayland on Wayland) | ✓ (drop files) |
 | Tray / menu bar icon: click to show or hide, menu with quick actions, close to tray | ✓ (notification area) | ✓ (KDE; GNOME with the AppIndicator extension) | ✓ (menu bar) |
 | Tray readouts: CPU, memory, battery or network on the icon | ✓ (gauge + tooltip) | ✓ (gauge + tooltip) | ✓ (gauge + text) |
 | Taskbar / launcher icon | ✓ | ✓ (installs a launcher entry for Wayland) | ✓ (Dock) |

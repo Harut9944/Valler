@@ -112,6 +112,12 @@ pub struct Store {
     // Cleaning mode: keep a visible indicator instead of a black screen.
     pub cleaning_keep_visible: bool,
 
+    // Shelf
+    pub shelf_items: Vec<crate::shelf::Item>,
+    pub shelf_remove_after_use: bool,
+    /// Linux: run through XWayland so files can be dropped on Valler.
+    pub linux_x11: bool,
+
     // Tray / menu bar icon
     pub tray_enabled: bool,
     pub close_to_tray: bool,
@@ -154,6 +160,9 @@ impl Default for Store {
             history_len: 90,
             alerts: AlertPrefs::default(),
             cleaning_keep_visible: false,
+            shelf_items: Vec::new(),
+            shelf_remove_after_use: true,
+            linux_x11: false,
             tray_enabled: true,
             close_to_tray: true,
             tray_readout: crate::tray::Readout::Off,

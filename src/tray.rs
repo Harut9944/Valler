@@ -14,6 +14,7 @@ pub enum TrayCmd {
     KeepAwake,
     CommandBar,
     System,
+    Shelf,
     Settings,
     Quit,
 }
@@ -63,6 +64,7 @@ impl Tray {
         let awake = CheckMenuItem::new("Keep awake", true, false, None);
         let cmd = MenuItem::new("Command bar…", true, None);
         let system = MenuItem::new("System monitor", true, None);
+        let shelf = MenuItem::new("Shelf", true, None);
         let settings = MenuItem::new("Settings…", true, None);
         let quit = MenuItem::new("Quit Valler", true, None);
         menu.append_items(&[
@@ -71,6 +73,7 @@ impl Tray {
             &awake,
             &cmd,
             &system,
+            &shelf,
             &PredefinedMenuItem::separator(),
             &settings,
             &quit,
@@ -83,6 +86,7 @@ impl Tray {
             (awake.id().clone(), TrayCmd::KeepAwake),
             (cmd.id().clone(), TrayCmd::CommandBar),
             (system.id().clone(), TrayCmd::System),
+            (shelf.id().clone(), TrayCmd::Shelf),
             (settings.id().clone(), TrayCmd::Settings),
             (quit.id().clone(), TrayCmd::Quit),
         ];
