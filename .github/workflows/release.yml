@@ -1,0 +1,181 @@
+# Builds Valler for every supported system and CPU, packages it, and — for a
+# version tag like v0.2.0 — publishes a GitHub Release with all downloads.
+#
+#   Linux    x86_64 (amd64) and arm64  → .tar.gz (program, launcher entry, icon, install.sh)
+#   Windows  x86_64 (amd64) and arm64  → .zip    (Valler.exe with its icon)
+#   macOS    arm64 (Apple silicon), x86_64 (Intel) and universal → Valler.app in a .zip
+#
+# Run it by pushing a tag (git tag v0.2.0 && git push origin v0.2.0) or by hand
+# from the Actions tab (workflow_dispatch: builds and uploads artifacts only).
+#
+# Note: the Linux arm64 build uses GitHub's arm64 runner (ubuntu-22.04-arm),
+# free for public repositories.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            arch: x86_64
+          - name: linux-arm64
+            os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            arch: arm64
+          - name: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            arch: x86_64
+          - name: windows-arm64
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
+            arch: arm64
+          - name: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+          - name: macos-x86_64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            arch: x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            v="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)-${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: Linux build packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev libxrandr-dev libxi-dev
+
+      # `ring` (TLS for the speed test) needs clang to build for Windows on Arm.
+      - name: Clang for Windows arm64
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        shell: bash
+        run: echo "C:\Program Files\LLVM\bin" >> "$GITHUB_PATH"
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: ci/package-linux.sh "target/${{ matrix.target }}/release/valler" "${{ matrix.arch }}" "$VERSION" dist
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ci/package-macos.sh "target/${{ matrix.target }}/release/valler" "${{ matrix.arch }}" "$VERSION" dist
+          mkdir -p bin
+          cp "target/${{ matrix.target }}/release/valler" "bin/valler-${{ matrix.arch }}"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./ci/package-windows.ps1 -Bin "target/${{ matrix.target }}/release/valler.exe" -Arch "${{ matrix.arch }}" -Version "$env:VERSION" -Out dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: valler-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Keep the macOS program for the universal build
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-bin-${{ matrix.arch }}
+          path: bin/*
+          if-no-files-found: error
+
+  macos-universal:
+    name: Build macos-universal
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            v="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)-${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-bin-*
+          path: bin
+          merge-multiple: true
+
+      - name: Combine Apple silicon and Intel into one app
+        run: |
+          lipo -create bin/valler-arm64 bin/valler-x86_64 -output valler
+          chmod +x valler
+          lipo -info valler
+          ci/package-macos.sh valler universal "$VERSION" dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: valler-macos-universal
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, macos-universal]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: valler-*
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

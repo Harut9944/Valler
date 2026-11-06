@@ -62,6 +62,30 @@ Linux build needs the usual windowing headers (`libxkbcommon`, `wayland`,
 For an Intel Mac from an Apple silicon Mac: `rustup target add x86_64-apple-darwin`
 and `cargo build --release --target x86_64-apple-darwin`.
 
+## Builds and releases (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): on every push to `main` and every pull
+  request, clippy with warnings as errors, then all tests, on Linux, Windows
+  and macOS.
+- **Release** (`.github/workflows/release.yml`): builds and packages Valler for
+
+  | System  | x86_64 (amd64) | arm64 | Package |
+  |---------|----------------|-------|---------|
+  | Linux   | ✓ | ✓ | `.tar.gz`: program, launcher entry, icon, `install.sh` |
+  | Windows | ✓ | ✓ | `.zip`: `Valler.exe` with its icon |
+  | macOS   | ✓ (Intel) | ✓ (Apple silicon) | `Valler.app` in a `.zip`, plus a universal app |
+
+  To publish a release, create a tag such as `v0.1.0` and send it to GitHub
+  (from GitHub's Releases page, or with git). The workflow builds every
+  package, adds `SHA256SUMS.txt` and creates the GitHub Release. Running it by
+  hand from the Actions tab builds the packages as downloadable artifacts
+  without publishing.
+
+Packaging scripts live in `ci/`; the icons in `assets/` come from
+`valler --export-icon assets/valler.png 1024`. macOS builds are signed ad hoc
+(first launch: right-click → Open); a Developer ID signature and notarization
+need an Apple developer certificate.
+
 ## Tests
 
 ```sh
