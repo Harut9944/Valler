@@ -93,6 +93,7 @@ pub const FEATURES: &[Feature] = &[
     Feature { id: "monitor_disk", group: Group::Monitor, name: "Disks", desc: "Free space per drive and read/write activity", icon: ph::HARD_DRIVES, support: Support::Everywhere, energy: "Checks every second", switchable: false },
     Feature { id: "monitor_power", group: Group::Monitor, name: "Battery and power", desc: "Charge, health, cycles, time left and power draw", icon: ph::LIGHTNING, support: Support::Everywhere, energy: "Checks every second", switchable: false },
     Feature { id: "monitor_alerts", group: Group::Monitor, name: "Alerts", desc: "Notifications for sustained processor load, high temperatures, memory, low disk space or low battery", icon: ph::BELL_RINGING, support: Support::Everywhere, energy: "Nothing at rest", switchable: false },
+    Feature { id: "tray_readouts", group: Group::Monitor, name: "Tray readouts", desc: "Processor, memory, battery or network speed on the tray icon, with a live gauge inside the icon", icon: ph::GAUGE, support: Support::Partial("Text beside the icon shows on macOS; other systems show the gauge and a tooltip. GNOME needs the AppIndicator extension for tray icons"), energy: "Checks every second", switchable: false },
     Feature { id: "fan_control", group: Group::Monitor, name: "Fan control", desc: "Manual fan speeds and temperature curves", icon: ph::FAN, support: Support::Later, energy: "Nothing at rest", switchable: false },
     // Sound
     Feature { id: "mixer", group: Group::Sound, name: "Volume mixer", desc: "Set volume per app, boost quiet audio past 100% and pick each app's output", icon: ph::SLIDERS_HORIZONTAL, support: Support::LinuxOnly, energy: "Nothing at rest", switchable: false },
@@ -166,7 +167,7 @@ pub const PRESETS: &[Preset] = &[
         name: "Essentials",
         desc: "Volume mixer, system monitor and keep awake.",
         icon: ph::STAR,
-        features: &["mixer", "mic_mute", "keep_awake", "monitor_cpu", "monitor_memory", "monitor_temps", "monitor_network", "monitor_disk", "monitor_power", "monitor_alerts"],
+        features: &["mixer", "mic_mute", "keep_awake", "monitor_cpu", "monitor_memory", "monitor_temps", "monitor_network", "monitor_disk", "monitor_power", "monitor_alerts", "tray_readouts"],
     },
     Preset {
         name: "Everyday tools",

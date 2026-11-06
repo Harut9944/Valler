@@ -331,38 +331,77 @@ pub fn header(ui: &mut Ui) {
 
 /// Draws the window icon (same mark) into an RGBA buffer.
 pub fn app_icon() -> egui::IconData {
-    let n = 64usize;
+    let n = 64u32;
+    egui::IconData { rgba: icon_rgba(n, None), width: n, height: n }
+}
+
+/// Renders the Valler mark at `n`×`n` pixels with 2× supersampling, so it
+/// looks clean at any size (window, taskbar, tray, launcher).
+/// `gauge` adds a live usage bar on the right edge (tray readouts).
+pub fn icon_rgba(n: u32, gauge: Option<(f32, Color32)>) -> Vec<u8> {
+    let n = n as usize;
     let mut rgba = vec![0u8; n * n * 4];
-    let put = |rgba: &mut Vec<u8>, x: usize, y: usize, c: [u8; 4]| {
-        let i = (y * n + x) * 4;
-        rgba[i..i + 4].copy_from_slice(&c);
-    };
+    let ss = 3usize;
     for y in 0..n {
         for x in 0..n {
-            let fx = x as f32 - 32.0;
-            let fy = y as f32 - 32.0;
-            // rounded square background
-            let inside = fx.abs() < 30.0 && fy.abs() < 30.0;
-            if !inside {
-                continue;
+            let mut acc = [0f32; 4];
+            for sy in 0..ss {
+                for sx in 0..ss {
+                    // Map the pixel into the 64-unit design space centred on 0.
+                    let fx = ((x as f32 + (sx as f32 + 0.5) / ss as f32) / n as f32) * 64.0 - 32.0;
+                    let fy = ((y as f32 + (sy as f32 + 0.5) / ss as f32) / n as f32) * 64.0 - 32.0;
+                    let c = icon_sample(fx, fy, gauge);
+                    let a = c[3] as f32 / 255.0;
+                    acc[0] += c[0] as f32 * a;
+                    acc[1] += c[1] as f32 * a;
+                    acc[2] += c[2] as f32 * a;
+                    acc[3] += a;
+                }
             }
-            let mut c = [0x1b, 0x1b, 0x1d, 255];
-            if (fx).hypot(fy + 6.0) < 13.0 {
-                c = [0xff, 0xb3, 0x47, 255];
+            let i = (y * n + x) * 4;
+            let cov = acc[3] / (ss * ss) as f32;
+            if acc[3] > 0.0 {
+                rgba[i] = (acc[0] / acc[3]) as u8;
+                rgba[i + 1] = (acc[1] / acc[3]) as u8;
+                rgba[i + 2] = (acc[2] / acc[3]) as u8;
             }
-            // V hills: left peak (-14,-12), right peak (14,-12), valley (0,16)
-            let base = 16.0;
-            let hill = |px: f32| -> f32 { -12.0 + (fx - px).abs() * (28.0 / 16.0) };
-            if fy < base && (fy > hill(-14.0) && fx < 0.0) {
-                c = [0x2f, 0x8b, 0xff, 255];
-            }
-            if fy < base && (fy > hill(14.0) && fx >= 0.0) {
-                c = [0x1f, 0x6b, 0xd6, 255];
-            }
-            put(&mut rgba, x, y, c);
+            rgba[i + 3] = (cov * 255.0).round() as u8;
         }
     }
-    egui::IconData { rgba, width: n as u32, height: n as u32 }
+    rgba
+}
+
+fn icon_sample(fx: f32, fy: f32, gauge: Option<(f32, Color32)>) -> [u8; 4] {
+    // Rounded square background.
+    let r = 12.0;
+    let half = 30.0;
+    let dx = (fx.abs() - (half - r)).max(0.0);
+    let dy = (fy.abs() - (half - r)).max(0.0);
+    if dx.hypot(dy) > r {
+        return [0, 0, 0, 0];
+    }
+    if let Some((frac, col)) = gauge {
+        // Bar on the right: track and fill from the bottom.
+        if fx > 17.0 && fx < 26.0 && fy > -24.0 && fy < 24.0 {
+            let top = 24.0 - 48.0 * frac.clamp(0.0, 1.0);
+            return if fy >= top { [col.r(), col.g(), col.b(), 255] } else { [0x3a, 0x3a, 0x40, 255] };
+        }
+    }
+    // Shift the mark left a little when the gauge is shown.
+    let fx = if gauge.is_some() { fx + 6.0 } else { fx };
+    let mut c = [0x1b, 0x1b, 0x1d, 255];
+    if fx.hypot(fy + 6.0) < 13.0 {
+        c = [0xff, 0xb3, 0x47, 255];
+    }
+    let base = 16.0;
+    let hill = |px: f32| -> f32 { -12.0 + (fx - px).abs() * (28.0 / 16.0) };
+    if fy < base && fy > hill(-14.0) && fx < 0.0 {
+        c = [0x2f, 0x8b, 0xff, 255];
+    }
+    if fy < base && fy > hill(14.0) && fx >= 0.0 {
+        c = [0x1f, 0x6b, 0xd6, 255];
+    }
+    c
 }
 
 pub fn fmt_bytes(b: u64) -> String {
@@ -518,5 +557,19 @@ pub fn resize_grip(ui: &mut Ui, id: &str) {
             [r.right_bottom() - vec2(o, 4.0), r.right_bottom() - vec2(4.0, o)],
             Stroke::new(1.2, c),
         );
+    }
+}
+
+#[cfg(test)]
+mod icon_tests {
+    /// Writes preview images of the icon into shots/ (run with --ignored).
+    #[test]
+    #[ignore]
+    fn preview_icons() {
+        let _ = std::fs::create_dir_all("shots");
+        for (name, n, g) in [("icon-256", 256u32, None), ("icon-tray", 32, Some((0.42f32, super::GREEN)))] {
+            let px = super::icon_rgba(n, g);
+            image::save_buffer(format!("shots/{name}.png"), &px, n, n, image::ExtendedColorType::Rgba8).unwrap();
+        }
     }
 }

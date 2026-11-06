@@ -29,6 +29,9 @@ macOS menu-bar utility collection (GPL-3.0-or-later).
 | Package manager, App updates, Uninstaller | ✓ (winget) | ✓ (Flatpak, Homebrew) | ✓ (Homebrew) |
 | Media tools: convert, resize and compress images | ✓ | ✓ | ✓ |
 | Paste as plain text | ✓ | ✓ | ✓ |
+| Tray / menu bar icon: click to show or hide, menu with quick actions, close to tray | ✓ (notification area) | ✓ (KDE; GNOME with the AppIndicator extension) | ✓ (menu bar) |
+| Tray readouts: CPU, memory, battery or network on the icon | ✓ (gauge + tooltip) | ✓ (gauge + tooltip) | ✓ (gauge + text) |
+| Taskbar / launcher icon | ✓ | ✓ (installs a launcher entry for Wayland) | ✓ (Dock) |
 | Settings with Features hub, bundles, platform support table | ✓ | ✓ | ✓ |
 
 Valler draws its own frameless, rounded window on every platform: drag it by the

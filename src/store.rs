@@ -111,6 +111,11 @@ pub struct Store {
 
     // Cleaning mode: keep a visible indicator instead of a black screen.
     pub cleaning_keep_visible: bool,
+
+    // Tray / menu bar icon
+    pub tray_enabled: bool,
+    pub close_to_tray: bool,
+    pub tray_readout: crate::tray::Readout,
     pub cleaning_presses: u32,
 
     /// Set by settings pages when they edit the store directly (never saved).
@@ -149,6 +154,9 @@ impl Default for Store {
             history_len: 90,
             alerts: AlertPrefs::default(),
             cleaning_keep_visible: false,
+            tray_enabled: true,
+            close_to_tray: true,
+            tray_readout: crate::tray::Readout::Off,
             cleaning_presses: 3,
             dirty_flag: false,
         }

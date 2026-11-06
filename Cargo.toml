@@ -22,6 +22,7 @@ serde_json = "1.0.154"
 starship-battery = "0.12.0"
 sysinfo = "0.40.1"
 trash = "5.3.0"
+tray-icon = { version = "0.26.1", default-features = false, features = ["ksni"] }
 ureq = "3.5.1"
 url = "2.5.8"
 

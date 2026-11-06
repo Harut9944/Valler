@@ -11,6 +11,7 @@ mod autostart;
 mod clipboard;
 mod command_bar;
 mod cleaner;
+mod desktop_entry;
 mod features;
 mod fonts;
 mod keepawake_ctl;
@@ -28,6 +29,7 @@ mod tabs;
 mod tools_extra;
 mod tools_more;
 mod tools_ui;
+mod tray;
 mod ui;
 mod urlclean;
 
