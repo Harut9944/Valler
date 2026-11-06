@@ -116,6 +116,7 @@ impl Controller {
 }
 
 /// Pure helpers for the platform files, kept here so they can be tested.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub mod parse {
     /// `ddcutil detect --brief` → (display number, monitor name).
     pub fn ddc_detect(text: &str) -> Vec<(String, String)> {

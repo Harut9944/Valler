@@ -1,7 +1,9 @@
 //! Installed applications for the command bar: .desktop entries on Linux,
 //! Start Menu shortcuts on Windows and .app bundles on macOS.
 
-use std::path::{Path, PathBuf};
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug)]

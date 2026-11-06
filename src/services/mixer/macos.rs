@@ -165,12 +165,11 @@ fn app_name(pid: i32, bundle: &str) -> String {
         sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[p]), true);
         if let Some(pr) = sys.process(p) {
             // Prefer the .app bundle name when the binary lives inside one.
-            if let Some(exe) = pr.exe() {
-                if let Some(app) = exe.ancestors().find(|a| a.extension().is_some_and(|e| e == "app")) {
-                    if let Some(stem) = app.file_stem() {
-                        return stem.to_string_lossy().to_string();
-                    }
-                }
+            if let Some(exe) = pr.exe()
+                && let Some(app) = exe.ancestors().find(|a| a.extension().is_some_and(|e| e == "app"))
+                && let Some(stem) = app.file_stem()
+            {
+                return stem.to_string_lossy().to_string();
             }
             return pr.name().to_string_lossy().to_string();
         }
