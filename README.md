@@ -16,7 +16,7 @@ macOS menu-bar utility collection.
 | Volume mixer: per-app volume and mute | ✓ (WASAPI sessions, up to 100 %) | ✓ (PulseAudio / PipeWire, boost to 200 %) | apps playing are listed; per-app volume next |
 | Output and microphone: volume, mute, default device | ✓ (device switch opens Sound settings) | ✓ | ✓ (CoreAudio) |
 | Per-app output device | — | ✓ | — |
-| Clipboard history, auto clear, clean URL (manual + automatic) | ✓ | ✓ | ✓ |
+| Clipboard history for text, images and files; auto clear; clean URL | ✓ | ✓ | ✓ |
 | Snippets (copy with variables), Scratchpad | ✓ | ✓ | ✓ |
 | Quit apps, Port manager, Cleaner (moves to trash) | ✓ | ✓ | ✓ |
 | Alerts: CPU load/temperature, memory, low disk, low battery (desktop notifications) | ✓ | ✓ | ✓ |
@@ -28,6 +28,8 @@ macOS menu-bar utility collection.
 | Keep awake automatically (while apps run / while plugged in, Any or All) | ✓ | ✓ | ✓ |
 | Command bar: colours (HEX/RGB/HSL), date maths, emoji | ✓ | ✓ | ✓ |
 | Scratchpad Markdown preview | ✓ | ✓ | ✓ |
+| Displays: brightness per screen | ✓ (laptop screens) | ✓ (backlight; external monitors via ddcutil) | — |
+| Software dimming (click-through overlay, also below minimum brightness) | ✓ | ✓ | ✓ |
 | Open at login | ✓ | ✓ (XDG autostart) | ✓ |
 | Package manager, App updates, Uninstaller | ✓ (winget) | ✓ (Flatpak, Homebrew) | ✓ (Homebrew) |
 | Media tools: convert, resize and compress images | ✓ | ✓ | ✓ |
@@ -63,8 +65,8 @@ and `cargo build --release --target x86_64-apple-darwin`.
 ## Tests
 
 ```sh
-cargo test               # 120 tests: every feature's logic plus every screen drawn off-screen
-cargo test -- --ignored  # 3 more that need a desktop session (tray icon, keep awake, icon previews)
+cargo test               # 133 tests: every feature's logic plus every screen drawn off-screen
+cargo test -- --ignored  # 4 more that need a desktop session (tray icon, keep awake, icon previews, real screens)
 ```
 
 Each feature has tests next to its code (link cleaning, snippets, calculator and
@@ -87,12 +89,15 @@ src/
     window.rs      quit, close to tray, show/hide, tray menu
     background.rs  mixer polling, clipboard collection
     automation.rs  keep-awake automation tick
+    dimmer.rs      software dimming overlay
     lifecycle.rs   eframe entry points
     screenshot.rs  --screenshot mode
   core/          shared data: saved settings, feature catalog
   services/      feature logic, no drawing code (each tested next to its code)
     command_bar/   calc, units, colors, dates, emoji, fuzzy
     keepawake/     inhibitor + automation rules
+    clipboard/     watcher, history rules, image storage
+    display/       brightness: linux.rs, windows.rs behind one API
     mixer/         linux.rs, windows.rs, macos.rs behind one API
     ...            alerts, apps, cleaner, clipboard, markdown, media, monitor,
                    packages, ports, quick_toggles, shelf, snippets, speedtest,

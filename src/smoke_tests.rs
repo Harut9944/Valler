@@ -216,3 +216,27 @@ fn automation_never_runs_in_screenshot_mode() {
     // The frame logic skips system actions on sample data; nothing is held.
     assert!(!app.awake.active());
 }
+
+#[test]
+fn displays_tab_draws_with_and_without_screens() {
+    let (ctx, mut app) = demo_app();
+    app.tab = Tab::Displays;
+    app.sub = None;
+    assert!(draw(&ctx, &mut app, PANEL, |a, ui, c| a.panel(ui, c)) > 20, "sample screens");
+    app.displays.lock().unwrap().screens = Some(Vec::new());
+    app.store.dim_level = 0.4;
+    assert!(draw(&ctx, &mut app, PANEL, |a, ui, c| a.panel(ui, c)) > 20, "no controllable screen");
+}
+
+#[test]
+fn clipboard_history_shows_text_images_and_files() {
+    use crate::services::clipboard::history::ClipEntry;
+    let (ctx, mut app) = demo_app();
+    app.store.clip_history.insert(0, ClipEntry::image("missing.png".into(), 800, 600, 0));
+    app.store.clip_history.insert(0, ClipEntry::files(vec!["/tmp/a.txt".into(), "/tmp/b.txt".into()], 0));
+    app.tab = Tab::Utilities;
+    app.sub = Some(Sub::Clipboard);
+    assert!(draw(&ctx, &mut app, PANEL, |a, ui, c| a.panel(ui, c)) > 20);
+    app.clip_search = "image".into();
+    assert!(draw(&ctx, &mut app, PANEL, |a, ui, c| a.panel(ui, c)) > 10);
+}

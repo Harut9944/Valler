@@ -7,6 +7,7 @@ mod format;
 mod icon;
 mod markdown;
 mod theme;
+mod thumbs;
 mod widgets;
 
 pub use chrome::*;
@@ -14,6 +15,7 @@ pub use format::*;
 pub use icon::*;
 pub use markdown::markdown;
 pub use theme::*;
+pub use thumbs::Thumbs;
 pub use widgets::*;
 
 #[cfg(test)]

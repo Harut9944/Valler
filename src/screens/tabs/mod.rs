@@ -4,6 +4,7 @@
 mod common;
 mod controls;
 mod disk;
+mod displays;
 mod keep_awake;
 mod mixer;
 mod network;
@@ -13,6 +14,7 @@ mod system;
 pub(crate) use common::*;
 pub(crate) use controls::*;
 pub(crate) use disk::*;
+pub(crate) use displays::*;
 pub(crate) use keep_awake::*;
 pub(crate) use mixer::*;
 pub(crate) use network::*;

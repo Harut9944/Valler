@@ -11,13 +11,7 @@ pub struct Snippet {
     pub text: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ClipEntry {
-    pub text: String,
-    pub pinned: bool,
-    /// Unix seconds when copied.
-    pub at: i64,
-}
+pub use crate::services::clipboard::history::ClipEntry;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NoteTab {
@@ -78,11 +72,15 @@ pub struct Store {
     // Keep awake
     pub keep_display_on: bool,
     pub keep_awake_minutes: u32,
+    /// Software dimming: how dark the overlay is (0 = off, up to 0.85).
+    pub dim_level: f32,
     pub keep_awake_auto: crate::services::keepawake::automation::Rules,
 
     // Clipboard
     pub clip_history: Vec<ClipEntry>,
     pub clip_max_items: usize,
+    /// Also keep copied images.
+    pub clip_images: bool,
     pub clip_auto_clear_secs: u32,
 
     // Snippets
@@ -143,9 +141,11 @@ impl Default for Store {
             launch_at_login: false,
             keep_display_on: true,
             keep_awake_minutes: 60,
+            dim_level: 0.0,
             keep_awake_auto: Default::default(),
             clip_history: Vec::new(),
             clip_max_items: 200,
+            clip_images: true,
             clip_auto_clear_secs: 0,
             snippets: vec![
                 Snippet { trigger: ";date".into(), text: "{{date}}".into() },
@@ -211,8 +211,8 @@ impl Store {
         let mut s = Self::default();
         let now = chrono::Utc::now().timestamp();
         s.clip_history = vec![
-            ClipEntry { text: "https://example.com/article?id=42".into(), pinned: true, at: now - 300 },
-            ClipEntry { text: "Meeting moved to 3 pm".into(), pinned: false, at: now - 120 },
+            ClipEntry { pinned: true, ..ClipEntry::text("https://example.com/article?id=42", now - 300) },
+            ClipEntry::text("Meeting moved to 3 pm", now - 120),
         ];
         s.notes = vec![NoteTab {
             title: "Plan".into(),

@@ -3,7 +3,8 @@
 
 use crate::services::clipboard::WatchConfig;
 use crate::services::mixer::{self};
-use crate::core::store::{ClipEntry, Store};
+use crate::core::store::Store;
+use crate::services::clipboard::history;
 use std::time::{Duration, Instant};
 use super::*;
 
@@ -45,28 +46,31 @@ impl ValleApp {
 
     pub(super) fn drain_clipboard(&mut self) {
         let mut changed = false;
+        let mut unused = Vec::new();
         if let Some(w) = &self.clip {
-            while let Ok(text) = w.rx.try_recv() {
+            while let Ok(clip) = w.rx.try_recv() {
                 if !self.store.is_on("clipboard") {
                     continue;
                 }
-                let h = &mut self.store.clip_history;
-                let pinned = h.iter().position(|e| e.text == text).map(|i| h.remove(i).pinned).unwrap_or(false);
-                h.insert(0, ClipEntry { text, pinned, at: chrono::Utc::now().timestamp() });
-                let max = self.store.clip_max_items.max(10);
-                let mut unpinned = 0;
-                h.retain(|e| {
-                    if e.pinned {
-                        return true;
-                    }
-                    unpinned += 1;
-                    unpinned <= max
-                });
+                let entry = clip.into_entry(chrono::Utc::now().timestamp());
+                unused.extend(history::add(&mut self.store.clip_history, entry, self.store.clip_max_items.max(10)));
                 changed = true;
             }
         }
+        forget_images(unused);
         if changed {
             self.mark_dirty();
+        }
+    }
+}
+
+/// Deletes saved clipboard images no entry uses any more.
+pub(crate) fn forget_images(paths: Vec<std::path::PathBuf>) {
+    let dir = crate::services::clipboard::images::dir();
+    for p in paths {
+        // Only ever touch Valler's own clipboard folder.
+        if p.starts_with(&dir) {
+            let _ = std::fs::remove_file(p);
         }
     }
 }
@@ -74,6 +78,7 @@ impl ValleApp {
 pub(super) fn watch_config(s: &Store) -> WatchConfig {
     WatchConfig {
         watch: s.is_on("clipboard"),
+        images: s.clip_images,
         auto_clean_urls: s.is_on("url_clean"),
         extra_params: s.url_extra_params.clone(),
         auto_clear_secs: if s.is_on("clip_autoclear") { s.clip_auto_clear_secs.max(5) } else { 0 },

@@ -18,7 +18,7 @@ pub const TOOLS: &[Tool] = &[
     Tool { sub: Sub::CommandBar, feature: "command_bar", icon: ph::MAGNIFYING_GLASS, name: "Command bar", desc: "Search tools, clipboard, snippets and notes. Calculate and convert units." },
     Tool { sub: Sub::QuickToggles, feature: "quick_toggles", icon: ph::TOGGLE_LEFT, name: "Quick toggles", desc: "Dark mode, lock screen, display off, screen saver and empty the trash." },
     Tool { sub: Sub::Shelf, feature: "shelf", icon: ph::TRAY, name: "Shelf", desc: "Park files, text and links for a moment, then copy or move them where they belong." },
-    Tool { sub: Sub::Clipboard, feature: "clipboard", icon: ph::CLIPBOARD_TEXT, name: "Clipboard", desc: "Stores copied text so you can reuse it later. Everything stays local and can be cleared anytime." },
+    Tool { sub: Sub::Clipboard, feature: "clipboard", icon: ph::CLIPBOARD_TEXT, name: "Clipboard", desc: "Keeps copied text, images and files to reuse later. Everything stays local and can be cleared anytime." },
     Tool { sub: Sub::Snippets, feature: "snippets", icon: ph::TEXT_AA, name: "Snippets", desc: "Saved text with date, time and clipboard variables, one click to copy." },
     Tool { sub: Sub::Scratchpad, feature: "scratchpad", icon: ph::NOTE_PENCIL, name: "Scratchpad", desc: "Autosaved notes in tabs." },
     Tool { sub: Sub::UrlClean, feature: "url_clean", icon: ph::LINK, name: "Clean URL", desc: "Removes tracking parameters from copied links." },

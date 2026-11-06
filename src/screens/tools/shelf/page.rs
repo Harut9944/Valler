@@ -5,10 +5,7 @@ use crate::services::shelf::{self};
 use crate::ui::{self, caption, card, title};
 use egui::Ui;
 use egui_phosphor::regular as ph;
-use std::sync::{Arc, Mutex};
 use super::*;
-
-pub type ThumbQueue = Arc<Mutex<Vec<(u64, egui::ColorImage)>>>;
 
 // ------------------------------------------------------------- full page
 
