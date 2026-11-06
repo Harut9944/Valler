@@ -1,0 +1,30 @@
+[package]
+name = "valler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+arboard = { version = "3.7.0", features = ["wayland-data-control"] }
+auto-launch = "0.6.0"
+chrono = "0.4.45"
+dirs = "7.0.0"
+eframe = "0.36"
+egui = "0.36"
+egui-phosphor = "0.14"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+keepawake = "0.6.1"
+local-ip-address = "0.6.13"
+netstat2 = "0.11.2"
+notify-rust = "4.18.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+starship-battery = "0.12.0"
+sysinfo = "0.40.1"
+trash = "5.3.0"
+ureq = "3.5.1"
+url = "2.5.8"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
