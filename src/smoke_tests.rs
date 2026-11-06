@@ -3,13 +3,13 @@
 //! Shelf off-screen, checking that each one renders and behaves.
 
 use crate::app::{SettingsPage, Sub, ValleApp};
-use crate::features::Tab;
+use crate::core::features::Tab;
 use egui::{Context, Pos2, RawInput, Rect, Ui, Vec2};
 
 /// A Valler on sample data, as the --screenshot mode runs it.
 pub(crate) fn demo_app() -> (Context, ValleApp) {
     let ctx = Context::default();
-    crate::fonts::install(&ctx);
+    crate::ui::fonts::install(&ctx);
     crate::ui::install_style(&ctx);
     let opts = crate::LaunchOptions { screenshot: Some("unused.png".into()), tab: None, settings: false };
     let app = ValleApp::with_context(ctx.clone(), opts);
@@ -59,7 +59,7 @@ const ALL_SUBS: [Sub; 16] = [
 #[test]
 fn every_panel_tab_draws() {
     let (ctx, mut app) = demo_app();
-    *app.mixer.lock().unwrap() = crate::mixer::demo();
+    *app.mixer.lock().unwrap() = crate::services::mixer::demo();
     for t in Tab::ALL {
         app.tab = t;
         app.sub = None;
@@ -71,7 +71,7 @@ fn every_panel_tab_draws() {
 #[test]
 fn every_utilities_tool_draws() {
     let (ctx, mut app) = demo_app();
-    app.ports = Some(Ok(crate::ports::demo()));
+    app.ports = Some(Ok(crate::services::ports::demo()));
     for s in ALL_SUBS {
         app.tab = Tab::Utilities;
         app.sub = Some(s);
@@ -83,8 +83,8 @@ fn every_utilities_tool_draws() {
 
 #[test]
 fn every_tool_card_is_installable_and_reachable_by_id() {
-    for t in crate::tools_ui::TOOLS {
-        assert!(crate::features::get(t.feature).is_some(), "{} has no catalog entry", t.name);
+    for t in crate::screens::tools::TOOLS {
+        assert!(crate::core::features::get(t.feature).is_some(), "{} has no catalog entry", t.name);
     }
     for id in ["clipboard", "snippets", "scratchpad", "cleanurl", "quitapps", "ports", "cleaner", "commandbar", "toggles", "cleaning", "timer", "packages", "updates", "uninstaller", "media", "shelf"] {
         assert!(crate::app::sub_from_id(id).is_some(), "--tab {id} should open a tool");
@@ -106,18 +106,18 @@ fn every_settings_page_draws() {
         SettingsPage::About,
     ] {
         app.settings_page = p;
-        let n = draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::settings_ui::show(a, ui, c));
+        let n = draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::screens::settings::show(a, ui, c));
         assert!(n > 20, "{p:?} painted only {n} shapes");
     }
     app.settings_page = SettingsPage::Features;
     app.hub_tab_support = true;
-    assert!(draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::settings_ui::show(a, ui, c)) > 50);
+    assert!(draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::screens::settings::show(a, ui, c)) > 50);
 }
 
 #[test]
 fn floating_shelf_draws_with_sample_items() {
     let (ctx, mut app) = demo_app();
-    let n = draw(&ctx, &mut app, Vec2::new(372.0, 330.0), |a, ui, c| crate::shelf_ui::floating_contents(a, ui, c));
+    let n = draw(&ctx, &mut app, Vec2::new(372.0, 330.0), |a, ui, c| crate::screens::tools::shelf::floating_contents(a, ui, c));
     assert!(n > 20);
     assert_eq!(app.store.shelf_items.len(), 5);
 }
@@ -141,7 +141,7 @@ fn uninstalling_features_hides_their_tabs() {
 #[test]
 fn applying_a_bundle_installs_exactly_its_features() {
     let (_ctx, mut app) = demo_app();
-    let preset = &crate::features::PRESETS[2]; // Battery and quiet
+    let preset = &crate::core::features::PRESETS[2]; // Battery and quiet
     app.store.installed = preset.features.iter().map(|s| s.to_string()).collect();
     let tabs = app.visible_tabs();
     assert!(tabs.contains(&Tab::System) && tabs.contains(&Tab::Power));
@@ -174,4 +174,45 @@ fn launch_options_pick_the_starting_screen() {
     assert_eq!(ValleApp::with_context(ctx.clone(), opts).tab, Tab::Network);
     let opts = crate::LaunchOptions { screenshot: Some("x.png".into()), tab: Some("monitor".into()), settings: true };
     assert_eq!(ValleApp::with_context(ctx, opts).settings_page, SettingsPage::Monitor);
+}
+
+#[test]
+fn scratchpad_preview_renders_markdown() {
+    let (ctx, mut app) = demo_app();
+    app.tab = Tab::Utilities;
+    app.sub = Some(Sub::Scratchpad);
+    let edit = draw(&ctx, &mut app, PANEL, |a, ui, c| a.panel(ui, c));
+    app.note_preview = true;
+    let preview = draw(&ctx, &mut app, PANEL, |a, ui, c| a.panel(ui, c));
+    assert!(edit > 20 && preview > 20);
+    assert!(app.store.notes[0].body.contains("# This week"), "sample note is Markdown");
+}
+
+#[test]
+fn keep_awake_automation_settings_draw() {
+    let (ctx, mut app) = demo_app();
+    app.settings_page = SettingsPage::KeepAwake;
+    app.store.keep_awake_auto.enabled = true;
+    app.store.keep_awake_auto.apps_enabled = true;
+    app.store.keep_awake_auto.apps = vec!["Video call".into()];
+    assert!(draw(&ctx, &mut app, SETTINGS, |a, ui, c| crate::screens::settings::show(a, ui, c)) > 30);
+}
+
+#[test]
+fn command_bar_draws_colour_date_and_emoji_answers() {
+    let (ctx, mut app) = demo_app();
+    app.tab = Tab::Utilities;
+    app.sub = Some(Sub::CommandBar);
+    for q in ["#2f8bff", "next monday", "emoji party", "12*(4+3)"] {
+        app.cmd_query = q.into();
+        assert!(draw(&ctx, &mut app, PANEL, |a, ui, c| a.panel(ui, c)) > 20, "{q}");
+    }
+}
+
+#[test]
+fn automation_never_runs_in_screenshot_mode() {
+    let (_ctx, mut app) = demo_app();
+    app.store.keep_awake_auto = crate::services::keepawake::automation::Rules { enabled: true, power_enabled: true, ..Default::default() };
+    // The frame logic skips system actions on sample data; nothing is held.
+    assert!(!app.awake.active());
 }

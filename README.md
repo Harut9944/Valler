@@ -25,6 +25,9 @@ macOS menu-bar utility collection (GPL-3.0-or-later).
 | Cleaning mode (full-screen cover, press Esc several times to finish) | ✓ | ✓ | ✓ |
 | Command bar app search and launch | ✓ (Start Menu) | ✓ (.desktop, Flatpak) | ✓ (/Applications) |
 | Timer with notification | ✓ | ✓ | ✓ |
+| Keep awake automatically (while apps run / while plugged in, Any or All) | ✓ | ✓ | ✓ |
+| Command bar: colours (HEX/RGB/HSL), date maths, emoji | ✓ | ✓ | ✓ |
+| Scratchpad Markdown preview | ✓ | ✓ | ✓ |
 | Open at login | ✓ | ✓ (XDG autostart) | ✓ |
 | Package manager, App updates, Uninstaller | ✓ (winget) | ✓ (Flatpak, Homebrew) | ✓ (Homebrew) |
 | Media tools: convert, resize and compress images | ✓ | ✓ | ✓ |
@@ -60,7 +63,7 @@ and `cargo build --release --target x86_64-apple-darwin`.
 ## Tests
 
 ```sh
-cargo test               # 94 tests: every feature's logic plus every screen drawn off-screen
+cargo test               # 120 tests: every feature's logic plus every screen drawn off-screen
 cargo test -- --ignored  # 3 more that need a desktop session (tray icon, keep awake, icon previews)
 ```
 
@@ -70,6 +73,43 @@ operations, media conversion, cleaner, app search, packages, ports, speed test,
 tray, settings storage and the feature catalog). The interface tests in
 `src/smoke_tests.rs` build Valler on sample data and draw every panel tab,
 Utilities tool, Settings page and the floating Shelf.
+
+## Project layout
+
+```
+src/
+  main.rs        start-up: options, window, run
+  cli.rs         command-line options (pure, tested)
+  app/           the application state and how it runs
+    mod.rs         ValleApp: state and construction
+    nav.rs         open tool / Settings page, --tab ids
+    panel.rs       header, tab bar, content, footer
+    window.rs      quit, close to tray, show/hide, tray menu
+    background.rs  mixer polling, clipboard collection
+    automation.rs  keep-awake automation tick
+    lifecycle.rs   eframe entry points
+    screenshot.rs  --screenshot mode
+  core/          shared data: saved settings, feature catalog
+  services/      feature logic, no drawing code (each tested next to its code)
+    command_bar/   calc, units, colors, dates, emoji, fuzzy
+    keepawake/     inhibitor + automation rules
+    mixer/         linux.rs, windows.rs, macos.rs behind one API
+    ...            alerts, apps, cleaner, clipboard, markdown, media, monitor,
+                   packages, ports, quick_toggles, shelf, snippets, speedtest,
+                   tray, urlclean, autostart, desktop_entry
+  ui/            visual building blocks: theme, widgets, chrome, icon,
+                 format, fonts, markdown renderer
+  screens/       what the person sees, one file per page
+    tabs/          keep awake, mixer, system, network, disk, power, controls
+    tools/         each Utilities tool (shelf/ split into page, tiles,
+                   floating window and actions)
+    settings/      sidebar + one file per Settings page
+  smoke_tests.rs every screen drawn off-screen on sample data
+```
+
+Rules of thumb: screens never talk to the operating system directly — they
+call `services`; services never draw; anything platform-specific sits behind
+one function with `#[cfg]` variants (see `services/mixer`).
 
 ## Options
 
