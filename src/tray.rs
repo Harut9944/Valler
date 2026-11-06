@@ -160,3 +160,15 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(1500));
     }
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn readout_options_are_distinct_and_labelled() {
+        let labels: std::collections::HashSet<&str> = Readout::ALL.iter().map(|r| r.label()).collect();
+        assert_eq!(labels.len(), Readout::ALL.len());
+        assert_eq!(Readout::default(), Readout::Off);
+    }
+}

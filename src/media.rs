@@ -117,3 +117,66 @@ pub fn pick_files() -> Vec<PathBuf> {
         .pick_files()
         .unwrap_or_default()
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+    use crate::test_util::TempDir;
+
+    fn sample(t: &TempDir) -> PathBuf {
+        let p = t.join("photo.png");
+        let img = image::RgbImage::from_fn(400, 300, |x, y| image::Rgb([(x % 256) as u8, (y % 256) as u8, 128]));
+        img.save(&p).unwrap();
+        p
+    }
+
+    #[test]
+    fn converts_to_jpeg_and_shrinks_large_images() {
+        let t = TempDir::new("media-jpg");
+        let src = sample(&t);
+        let job = Job { files: vec![src.clone()], format: Format::Jpeg, max_side: 100, quality: 70 };
+        let (out, _saved) = convert_one(&src, &job).unwrap();
+        assert_eq!(out.extension().unwrap(), "jpg");
+        let img = image::open(&out).unwrap();
+        assert_eq!((img.width(), img.height()), (100, 75));
+        assert!(src.exists(), "the original is kept");
+    }
+
+    #[test]
+    fn converts_to_png_and_webp_keeping_size() {
+        let t = TempDir::new("media-png");
+        let src = sample(&t);
+        for f in [Format::Webp, Format::Png] {
+            let job = Job { files: vec![src.clone()], format: f, max_side: 0, quality: 90 };
+            let (out, _) = convert_one(&src, &job).unwrap();
+            let img = image::open(&out).unwrap();
+            assert_eq!((img.width(), img.height()), (400, 300));
+        }
+        // Converting PNG to PNG next to the original gets a new name.
+        assert!(t.join("photo (1).png").exists());
+    }
+
+    #[test]
+    fn reports_files_that_are_not_images() {
+        let t = TempDir::new("media-bad");
+        let bad = t.join("notes.png");
+        std::fs::write(&bad, "not an image").unwrap();
+        let job = Job { files: vec![bad.clone()], format: Format::Jpeg, max_side: 0, quality: 80 };
+        assert!(convert_one(&bad, &job).is_err());
+    }
+
+    #[test]
+    fn batch_job_reports_progress() {
+        let t = TempDir::new("media-batch");
+        let src = sample(&t);
+        let state: Shared = Default::default();
+        start(state.clone(), egui::Context::default(), Job { files: vec![src, t.join("missing.png")], format: Format::Jpeg, max_side: 50, quality: 80 });
+        let begun = std::time::Instant::now();
+        while state.lock().unwrap().running {
+            assert!(begun.elapsed().as_secs() < 20);
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let p = state.lock().unwrap().clone();
+        assert_eq!((p.done, p.total, p.outputs.len(), p.errors.len()), (2, 2, 1, 1));
+    }
+}

@@ -57,6 +57,20 @@ Linux build needs the usual windowing headers (`libxkbcommon`, `wayland`,
 For an Intel Mac from an Apple silicon Mac: `rustup target add x86_64-apple-darwin`
 and `cargo build --release --target x86_64-apple-darwin`.
 
+## Tests
+
+```sh
+cargo test               # 94 tests: every feature's logic plus every screen drawn off-screen
+cargo test -- --ignored  # 3 more that need a desktop session (tray icon, keep awake, icon previews)
+```
+
+Each feature has tests next to its code (link cleaning, snippets, calculator and
+units, alerts, monitor, keep awake, mixer parsing, clipboard-free Shelf
+operations, media conversion, cleaner, app search, packages, ports, speed test,
+tray, settings storage and the feature catalog). The interface tests in
+`src/smoke_tests.rs` build Valler on sample data and draw every panel tab,
+Utilities tool, Settings page and the floating Shelf.
+
 ## Options
 
 ```

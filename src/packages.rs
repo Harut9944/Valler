@@ -110,10 +110,13 @@ fn flatpak_rows(text: &str, backend: Backend, updates: bool) -> Vec<Package> {
 
 fn brew_list(cask: bool) -> Vec<Package> {
     let args: &[&str] = if cask { &["list", "--cask", "--versions"] } else { &["list", "--formula", "--versions"] };
+    parse_brew_list(&out("brew", args).unwrap_or_default(), cask)
+}
+
+/// `brew list --versions`: "name 1.2 1.3" per line.
+fn parse_brew_list(text: &str, cask: bool) -> Vec<Package> {
     let b = if cask { Backend::BrewCask } else { Backend::Brew };
-    out("brew", args)
-        .unwrap_or_default()
-        .lines()
+    text.lines()
         .filter_map(|l| {
             let mut it = l.split_whitespace();
             let name = it.next()?.to_string();
@@ -123,23 +126,27 @@ fn brew_list(cask: bool) -> Vec<Package> {
 }
 
 fn brew_outdated() -> Vec<Package> {
-    // "name (1.0) < 1.1" per line
-    let mut v = Vec::new();
-    for (cask, args) in [(false, vec!["outdated", "--formula", "--verbose"]), (true, vec!["outdated", "--cask", "--verbose"])] {
-        for l in out("brew", &args).unwrap_or_default().lines() {
-            let Some((left, new)) = l.split_once(" < ").or_else(|| l.split_once(" != ")) else { continue };
+    let mut v = parse_brew_outdated(&out("brew", &["outdated", "--formula", "--verbose"]).unwrap_or_default(), false);
+    v.extend(parse_brew_outdated(&out("brew", &["outdated", "--cask", "--verbose"]).unwrap_or_default(), true));
+    v
+}
+
+/// `brew outdated --verbose`: "name (1.0) < 1.1" (casks may use "!=").
+fn parse_brew_outdated(text: &str, cask: bool) -> Vec<Package> {
+    text.lines()
+        .filter_map(|l| {
+            let (left, new) = l.split_once(" < ").or_else(|| l.split_once(" != "))?;
             let (name, cur) = left.split_once(' ').unwrap_or((left, ""));
-            v.push(Package {
+            Some(Package {
                 backend: if cask { Backend::BrewCask } else { Backend::Brew },
                 id: name.to_string(),
                 name: name.to_string(),
                 version: cur.trim_matches(|c| c == '(' || c == ')').to_string(),
                 new_version: new.trim().to_string(),
                 desc: String::new(),
-            });
-        }
-    }
-    v
+            })
+        })
+        .collect()
 }
 
 fn brew_search(q: &str) -> Vec<Package> {
@@ -385,5 +392,57 @@ mod tests {
     fn parses_flatpak() {
         let r = flatpak_rows("org.a.B\tB app\t1.0\n", Backend::Flatpak, false);
         assert_eq!(r[0].name, "B app");
+    }
+}
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn parses_homebrew_lists() {
+        let l = parse_brew_list("git 2.45.0\nnode 20.1 22.3\n", false);
+        assert_eq!(l.len(), 2);
+        assert_eq!((l[1].name.as_str(), l[1].version.as_str()), ("node", "20.1 22.3"));
+        assert_eq!(parse_brew_list("firefox 130.0\n", true)[0].backend, Backend::BrewCask);
+        let o = parse_brew_outdated("git (2.44.0) < 2.45.0\nslack (4.1) != 4.2\nnot a row\n", false);
+        assert_eq!(o.len(), 2);
+        assert_eq!((o[0].version.as_str(), o[0].new_version.as_str()), ("2.44.0", "2.45.0"));
+        assert_eq!(o[1].new_version, "4.2");
+    }
+
+    #[test]
+    fn parses_winget_search_without_available_column() {
+        let t = "Name   Id            Version Match      Source\n---------------------------------------------\nVLC    VideoLAN.VLC  3.0.21  Tag: video winget\n";
+        let r = winget_table(t, false);
+        assert_eq!(r.len(), 1);
+        assert_eq!((r[0].name.as_str(), r[0].id.as_str()), ("VLC", "VideoLAN.VLC"));
+        assert!(r[0].new_version.is_empty());
+        assert!(winget_table("No package found matching input criteria.", false).is_empty());
+    }
+
+    #[test]
+    fn parses_flatpak_updates_and_search() {
+        let u = flatpak_rows("org.a.App\tApp\t2.0\n", Backend::Flatpak, true);
+        assert_eq!((u[0].version.as_str(), u[0].new_version.as_str()), ("", "2.0"));
+        let s = flatpak_rows("org.b.B\tB\t1.0\tA nice app\n\n", Backend::Flatpak, false);
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].desc, "A nice app");
+    }
+
+    #[test]
+    fn demo_and_labels() {
+        let d = demo();
+        assert_eq!(d.installed.as_ref().unwrap().len(), 3);
+        assert_eq!(d.updates.as_ref().unwrap()[0].new_version, "3.0.22");
+        for b in [Backend::Flatpak, Backend::Brew, Backend::BrewCask, Backend::Winget] {
+            assert!(!b.label().is_empty());
+        }
+    }
+
+    #[test]
+    fn detection_does_not_fail() {
+        // Whatever this machine has, detecting must not panic or hang.
+        let _ = detect();
     }
 }

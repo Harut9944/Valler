@@ -162,17 +162,18 @@ fn walk(dir: &Path, depth: u32, f: &mut dyn FnMut(&Path)) {
     }
 }
 
+/// Drops .desktop field codes like %U and %f that only make sense with files.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn clean_exec(exec: &str) -> String {
+    exec.split_whitespace().filter(|t| !(t.len() == 2 && t.starts_with('%'))).collect::<Vec<_>>().join(" ")
+}
+
 /// Starts the app without waiting for it.
 pub fn launch(app: &AppEntry) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     let mut cmd = {
         // Drop field codes like %U and %f that only make sense with files.
-        let exec: String = app
-            .exec
-            .split_whitespace()
-            .filter(|t| !(t.len() == 2 && t.starts_with('%')))
-            .collect::<Vec<_>>()
-            .join(" ");
+        let exec = clean_exec(&app.exec);
         let mut c = std::process::Command::new("sh");
         c.args(["-c", &format!("{exec} &")]);
         c
@@ -194,4 +195,51 @@ pub fn launch(app: &AppEntry) -> Result<(), String> {
         let _ = child.wait();
     });
     Ok(())
+}
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn strips_desktop_field_codes() {
+        assert_eq!(clean_exec("firefox %u"), "firefox");
+        assert_eq!(clean_exec("code --new-window %F"), "code --new-window");
+        assert_eq!(clean_exec("app --flag=%x"), "app --flag=%x");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn reads_launcher_entries_and_hides_hidden_ones() {
+        let t = crate::test_util::TempDir::new("apps");
+        let ok = t.join("ok.desktop");
+        std::fs::write(&ok, "[Desktop Entry]\nType=Application\nName=Editor\nComment=Edit text\nExec=editor %F\n[Desktop Action new]\nName=New window\nExec=editor --new\n").unwrap();
+        let a = parse_desktop(&ok, "KDE").unwrap();
+        assert_eq!((a.name.as_str(), a.detail.as_str(), a.exec.as_str()), ("Editor", "Edit text", "editor %F"));
+        let hidden = t.join("hidden.desktop");
+        std::fs::write(&hidden, "[Desktop Entry]\nType=Application\nName=Helper\nExec=helper\nNoDisplay=true\n").unwrap();
+        assert!(parse_desktop(&hidden, "KDE").is_none());
+        let gnome_only = t.join("g.desktop");
+        std::fs::write(&gnome_only, "[Desktop Entry]\nType=Application\nName=G\nExec=g\nOnlyShowIn=GNOME;\n").unwrap();
+        assert!(parse_desktop(&gnome_only, "KDE").is_none());
+        assert!(parse_desktop(&gnome_only, "GNOME").is_some());
+        let link = t.join("l.desktop");
+        std::fs::write(&link, "[Desktop Entry]\nType=Link\nName=L\nURL=https://a\n").unwrap();
+        assert!(parse_desktop(&link, "KDE").is_none());
+    }
+
+    #[test]
+    fn finds_installed_apps() {
+        let out: Shared = Default::default();
+        scan(out.clone(), egui::Context::default());
+        let begun = std::time::Instant::now();
+        while out.lock().unwrap().is_none() {
+            assert!(begun.elapsed().as_secs() < 20);
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let list = out.lock().unwrap().clone().unwrap();
+        // Sorted by name, no duplicate names.
+        assert!(list.windows(2).all(|w| w[0].name.to_lowercase() <= w[1].name.to_lowercase()));
+        assert!(list.windows(2).all(|w| !w[0].name.eq_ignore_ascii_case(&w[1].name)));
+    }
 }

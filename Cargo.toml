@@ -14,7 +14,6 @@ egui-phosphor = "0.14"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp", "tiff"] }
 keepawake = "0.6.1"
 local-ip-address = "0.6.13"
-netstat2 = "0.11.2"
 notify-rust = "4.18.2"
 rfd = "0.17.2"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -46,3 +45,6 @@ windows = { version = "0.62", features = [
 
 [target.'cfg(target_os = "linux")'.dependencies]
 winit = { version = "0.30", default-features = false, features = ["x11", "wayland"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+netstat2 = "0.11.2"

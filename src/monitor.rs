@@ -412,3 +412,54 @@ fn read_battery(m: &starship_battery::Manager) -> Option<BatteryInfo> {
         technology: format!("{:?}", b.technology()),
     })
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn history_is_capped() {
+        let mut h = VecDeque::new();
+        for i in 0..(HISTORY + 25) {
+            push(&mut h, i as f32);
+        }
+        assert_eq!(h.len(), HISTORY);
+        assert_eq!(*h.back().unwrap(), (HISTORY + 24) as f32);
+    }
+
+    #[test]
+    fn memory_pressure_levels() {
+        let mut s = Snapshot { mem_total: 100, mem_used: 50, ..Default::default() };
+        assert_eq!(s.pressure().0, "Normal");
+        assert!((s.mem_frac() - 0.5).abs() < 1e-6);
+        s.mem_used = 85;
+        assert_eq!(s.pressure().0, "Elevated");
+        s.mem_used = 95;
+        assert_eq!(s.pressure().0, "Critical");
+        // Heavy swapping at 86 % also counts as critical.
+        s.mem_used = 86;
+        s.swap_total = 100;
+        s.swap_used = 60;
+        assert_eq!(s.pressure().0, "Critical");
+        assert_eq!(Snapshot::default().mem_frac(), 0.0);
+    }
+
+    #[test]
+    fn sampler_produces_real_readings() {
+        let shared = spawn(egui::Context::default());
+        let start = std::time::Instant::now();
+        loop {
+            let s = shared.lock().unwrap().clone();
+            if s.ready {
+                assert!(s.mem_total > 0);
+                assert!(!s.per_core.is_empty());
+                assert!(s.cpu_total >= 0.0 && s.cpu_total <= 100.0 + f32::EPSILON);
+                assert!(!s.procs.is_empty());
+                assert!(!s.cpu_hist.is_empty());
+                break;
+            }
+            assert!(start.elapsed().as_secs() < 10, "monitor never became ready");
+            std::thread::sleep(Duration::from_millis(200));
+        }
+    }
+}

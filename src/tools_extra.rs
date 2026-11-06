@@ -527,3 +527,49 @@ pub fn timer_view(app: &mut ValleApp, ui: &mut Ui) {
         ui.add(egui::Label::new(caption("When time is up Valler shows a desktop notification, even if this window is minimized.")).wrap());
     });
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+    use crate::smoke_tests::demo_app;
+
+    fn top(app: &mut ValleApp, q: &str) -> Vec<String> {
+        app.cmd_query = q.into();
+        command_rows(app).into_iter().map(|r| r.title).collect()
+    }
+
+    #[test]
+    fn command_bar_calculates_converts_and_finds_tools() {
+        let (_ctx, mut app) = demo_app();
+        assert_eq!(top(&mut app, "12*7")[0], "= 84");
+        assert!(top(&mut app, "10 km to m")[0].starts_with("10 km = 10000 m"));
+        assert_eq!(top(&mut app, "shelf")[0], "Shelf");
+        assert_eq!(top(&mut app, "timer")[0], "Timer");
+        // Web search is always offered last for a typed query.
+        assert!(top(&mut app, "anything").last().unwrap().starts_with("Search the web"));
+    }
+
+    #[test]
+    fn command_bar_searches_clipboard_snippets_and_notes() {
+        let (_ctx, mut app) = demo_app();
+        assert!(top(&mut app, "meeting").iter().any(|t| t.contains("Meeting moved")), "clipboard history");
+        assert!(top(&mut app, ";sig").contains(&";sig".to_string()), "snippets");
+        app.store.notes[0].body = "groceries: apples".into();
+        assert!(top(&mut app, "apples").contains(&"Notes".to_string()), "scratchpad notes");
+    }
+
+    #[test]
+    fn command_bar_hides_uninstalled_tools() {
+        let (_ctx, mut app) = demo_app();
+        app.store.installed.remove("timer");
+        assert!(!top(&mut app, "timer").contains(&"Timer".to_string()));
+        app.cmd_query.clear();
+        assert!(!command_rows(&app).is_empty(), "an empty query lists tools to browse");
+    }
+
+    #[test]
+    fn timer_clock_format() {
+        assert_eq!(fmt_clock(Duration::from_secs(65)), "01:05");
+        assert_eq!(fmt_clock(Duration::from_secs(3725)), "1:02:05");
+    }
+}

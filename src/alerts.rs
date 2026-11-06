@@ -49,6 +49,8 @@ pub struct Alerts {
     bat_temp: Gate,
     last_sent: HashMap<Kind, Instant>,
     pub last_message: Option<String>,
+    /// How many notifications were sent (for the Settings page and tests).
+    pub sent: u32,
 }
 
 pub fn any_enabled(s: &Store) -> bool {
@@ -104,6 +106,9 @@ impl Alerts {
         }
         self.last_sent.insert(kind, Instant::now());
         self.last_message = Some(format!("{title}: {body}"));
+        self.sent += 1;
+        // Tests count alerts without putting notifications on the desktop.
+        #[cfg(not(test))]
         notify(title, body);
     }
 }
@@ -131,5 +136,91 @@ mod tests {
         assert!(g.since.is_none());
         g.since = Some(Instant::now() - SUSTAINED);
         assert!(g.check(Some(95.0), 90.0));
+    }
+}
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+    use crate::monitor::{BatteryInfo, DiskInfo, Snapshot};
+
+    fn ready() -> Snapshot {
+        Snapshot { ready: true, mem_total: 100, mem_used: 10, ..Default::default() }
+    }
+
+    #[test]
+    fn everything_is_off_by_default() {
+        let store = Store::default();
+        assert!(!any_enabled(&store));
+        let mut a = Alerts::default();
+        let mut s = ready();
+        s.cpu_total = 100.0;
+        s.mem_used = 99;
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 0);
+    }
+
+    #[test]
+    fn processor_alert_needs_a_sustained_reading_and_respects_cooldown() {
+        let mut store = Store::default();
+        store.alerts.cpu = true;
+        let mut a = Alerts::default();
+        let mut s = ready();
+        s.cpu_total = 95.0;
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 0, "a single reading is not enough");
+        a.cpu.since = Some(Instant::now() - SUSTAINED);
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 1);
+        assert!(a.last_message.as_deref().unwrap().contains("processor"));
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 1, "cooldown stops repeats");
+        s.cpu_total = 20.0;
+        a.evaluate(&s, &store);
+        assert!(a.cpu.since.is_none(), "dropping below the limit resets the timer");
+    }
+
+    #[test]
+    fn memory_disk_and_battery_alerts() {
+        let mut store = Store::default();
+        store.alerts.memory = true;
+        store.alerts.disk = true;
+        store.alerts.battery = true;
+        let mut s = ready();
+        s.mem_used = 95;
+        s.disks = vec![DiskInfo { mount: "/".into(), total: 100, avail: 5, ..Default::default() }];
+        s.battery = Some(BatteryInfo { percent: 10.0, charging: false, ..Default::default() });
+        let mut a = Alerts::default();
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 3);
+    }
+
+    #[test]
+    fn charging_battery_and_healthy_disk_stay_quiet() {
+        let mut store = Store::default();
+        store.alerts.disk = true;
+        store.alerts.battery = true;
+        let mut s = ready();
+        s.disks = vec![DiskInfo { mount: "/".into(), total: 100, avail: 50, ..Default::default() }];
+        s.battery = Some(BatteryInfo { percent: 10.0, charging: true, ..Default::default() });
+        let mut a = Alerts::default();
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 0);
+    }
+
+    #[test]
+    fn uninstalled_feature_or_unready_monitor_never_alerts() {
+        let mut store = Store::default();
+        store.alerts.memory = true;
+        let mut s = ready();
+        s.mem_used = 99;
+        store.installed.remove("monitor_alerts");
+        let mut a = Alerts::default();
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 0);
+        store.installed.insert("monitor_alerts".into());
+        s.ready = false;
+        a.evaluate(&s, &store);
+        assert_eq!(a.sent, 0);
     }
 }

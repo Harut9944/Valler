@@ -316,3 +316,96 @@ mod tests {
         assert_eq!(summary(&v), "1 image, 1 note, 1 link");
     }
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+    use crate::test_util::TempDir;
+
+    fn setup() -> (TempDir, Vec<Item>) {
+        let t = TempDir::new("shelf");
+        std::fs::write(t.join("a.txt"), "hello").unwrap();
+        std::fs::create_dir_all(t.join("folder/inner")).unwrap();
+        std::fs::write(t.join("folder/inner/b.txt"), "deep").unwrap();
+        let mut items = Vec::new();
+        add_paths(&mut items, [t.join("a.txt"), t.join("folder")]);
+        (t, items)
+    }
+
+    #[test]
+    fn detects_files_and_folders_and_skips_duplicates() {
+        let (t, mut items) = setup();
+        assert_eq!(items[0].kind, Kind::File);
+        assert_eq!(items[1].kind, Kind::Folder);
+        assert_eq!(add_paths(&mut items, [t.join("a.txt")]), 0);
+        assert_eq!(items[0].title(), "a.txt");
+        assert_eq!(items[0].size(), Some(5));
+        assert!(items[0].exists());
+        assert_ne!(items[0].id, items[1].id);
+    }
+
+    #[test]
+    fn copies_files_and_folders_into_a_folder_without_overwriting() {
+        let (t, items) = setup();
+        let dst = TempDir::new("shelf-dst");
+        let refs: Vec<&Item> = items.iter().collect();
+        let (done, failed, moved) = transfer(&refs, &dst.0, false);
+        assert_eq!((done, failed), (2, 0));
+        assert!(moved.is_empty());
+        assert_eq!(std::fs::read_to_string(dst.join("a.txt")).unwrap(), "hello");
+        assert_eq!(std::fs::read_to_string(dst.join("folder/inner/b.txt")).unwrap(), "deep");
+        assert!(t.join("a.txt").exists(), "copying keeps the original");
+        // A second copy gets a new name instead of replacing the first.
+        transfer(&refs[..1], &dst.0, false);
+        assert!(dst.join("a 2.txt").exists());
+    }
+
+    #[test]
+    fn moves_files_and_reports_new_locations() {
+        let (t, items) = setup();
+        let dst = TempDir::new("shelf-move");
+        let refs: Vec<&Item> = items.iter().collect();
+        let (done, failed, moved) = transfer(&refs, &dst.0, true);
+        assert_eq!((done, failed), (2, 0));
+        assert!(!t.join("a.txt").exists());
+        assert!(!t.join("folder").exists());
+        assert_eq!(moved.len(), 2);
+        assert!(moved.iter().all(|(_, p)| p.exists()));
+    }
+
+    #[test]
+    fn text_items_are_saved_as_text_files() {
+        let dst = TempDir::new("shelf-text");
+        let mut items = Vec::new();
+        add_text(&mut items, "Buy milk\nand bread");
+        let refs: Vec<&Item> = items.iter().collect();
+        let (done, _, _) = transfer(&refs, &dst.0, false);
+        assert_eq!(done, 1);
+        assert_eq!(std::fs::read_to_string(dst.join("Buy milk.txt")).unwrap(), "Buy milk\nand bread");
+    }
+
+    #[test]
+    fn missing_files_are_detected() {
+        let (t, items) = setup();
+        std::fs::remove_file(t.join("a.txt")).unwrap();
+        assert!(!items[0].exists());
+        assert_eq!(items[0].size(), None);
+    }
+
+    #[test]
+    fn summary_and_demo() {
+        assert_eq!(summary(&[]), "Empty");
+        let d = demo();
+        assert_eq!(summary(&d), "2 files, 1 image, 1 note, 1 link");
+        assert!(d.iter().any(|i| i.pinned));
+    }
+
+    #[test]
+    fn items_survive_saving() {
+        let (_t, items) = setup();
+        let json = serde_json::to_string(&items).unwrap();
+        let back: Vec<Item> = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.len(), 2);
+        assert_eq!(back[1].kind, Kind::Folder);
+    }
+}

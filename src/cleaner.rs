@@ -122,3 +122,44 @@ pub fn demo() -> Vec<Item> {
         Item { category: "Thumbnails", path: PathBuf::from("~/.cache/thumbnails"), size: 88_080_384, selected: false },
     ]
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+    use crate::test_util::TempDir;
+
+    #[test]
+    fn measures_folders_recursively() {
+        let t = TempDir::new("cleaner");
+        std::fs::create_dir_all(t.join("a/b")).unwrap();
+        std::fs::write(t.join("a/one.bin"), vec![0u8; 1000]).unwrap();
+        std::fs::write(t.join("a/b/two.bin"), vec![0u8; 2500]).unwrap();
+        assert_eq!(dir_size(&t.0, 0), 3500);
+        assert_eq!(dir_size(&t.join("a/one.bin"), 0), 1000);
+        assert_eq!(dir_size(&t.join("nope"), 0), 0);
+    }
+
+    #[test]
+    fn knows_where_this_system_keeps_caches() {
+        let r = roots();
+        assert!(!r.is_empty());
+        assert!(r.iter().all(|(label, _)| !label.is_empty()));
+    }
+
+    #[test]
+    fn scan_finishes() {
+        let state: Shared = Default::default();
+        scan(state.clone(), egui::Context::default());
+        let begun = std::time::Instant::now();
+        loop {
+            if let ScanState::Done(items) = state.lock().unwrap().clone() {
+                // Largest first, nothing of Valler's own.
+                assert!(items.windows(2).all(|w| w[0].size >= w[1].size));
+                assert!(items.iter().all(|i| !i.path.to_string_lossy().to_lowercase().contains("valler")));
+                break;
+            }
+            assert!(begun.elapsed().as_secs() < 60, "scan took too long");
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    }
+}

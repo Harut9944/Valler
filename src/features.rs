@@ -260,3 +260,61 @@ impl Tab {
         }
     }
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn feature_ids_are_unique_and_described() {
+        let mut ids = std::collections::HashSet::new();
+        for f in FEATURES {
+            assert!(ids.insert(f.id), "duplicate id {}", f.id);
+            assert!(!f.name.is_empty() && !f.desc.is_empty() && !f.energy.is_empty(), "{} needs text", f.id);
+            assert!(get(f.id).is_some());
+            if let Support::Partial(note) = f.support {
+                assert!(!note.is_empty());
+            }
+        }
+        assert!(get("nope").is_none());
+    }
+
+    #[test]
+    fn tabs_and_presets_point_at_real_features() {
+        for t in Tab::ALL {
+            assert_eq!(Tab::from_id(t.id()), Some(t));
+            assert!(!t.title().is_empty());
+            for f in t.features() {
+                assert!(get(f).is_some(), "tab {} lists unknown feature {f}", t.id());
+            }
+        }
+        for p in PRESETS {
+            for f in p.features {
+                assert!(get(f).is_some(), "preset {} lists unknown feature {f}", p.name);
+            }
+        }
+        for id in default_enabled() {
+            assert!(get(&id).is_some());
+        }
+    }
+
+    #[test]
+    fn every_working_feature_appears_somewhere_in_the_panel() {
+        for f in FEATURES.iter().filter(|f| f.support.works_here()) {
+            let on_a_tab = Tab::ALL.iter().any(|t| t.features().contains(&f.id));
+            let elsewhere = ["snippets", "monitor_alerts", "tray_readouts", "paste_plain", "clip_autoclear", "monitor_gpu"].contains(&f.id);
+            assert!(on_a_tab || elsewhere, "{} is installable but has no place in the panel", f.id);
+        }
+    }
+
+    #[test]
+    fn default_install_matches_platform_support() {
+        let d = default_installed();
+        for f in FEATURES {
+            assert_eq!(d.contains(f.id), f.support.works_here(), "{}", f.id);
+        }
+        assert_eq!(Support::Later.label(), "Coming later");
+        assert!(!Support::Later.works_here());
+        assert!(Support::Everywhere.works_here());
+    }
+}

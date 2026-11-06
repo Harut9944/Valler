@@ -173,3 +173,26 @@ pub fn spawn(out: Outcome, ctx: egui::Context, f: impl FnOnce() -> String + Send
 fn _unused() {
     let _ = output;
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn actions_report_back_to_the_window() {
+        let out: Outcome = Default::default();
+        spawn(out.clone(), egui::Context::default(), || "done".to_string());
+        let begun = std::time::Instant::now();
+        while out.lock().unwrap().is_none() {
+            assert!(begun.elapsed().as_secs() < 5);
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert_eq!(out.lock().unwrap().as_deref(), Some("done"));
+    }
+
+    #[test]
+    fn reading_desktop_state_never_panics() {
+        let _ = dark_mode();
+        let _ = trash_count();
+    }
+}

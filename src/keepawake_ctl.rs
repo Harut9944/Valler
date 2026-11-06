@@ -81,3 +81,38 @@ impl KeepAwake {
         self.until.map(|u| u.saturating_duration_since(Instant::now()))
     }
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn durations_include_until_stopped() {
+        assert!(DURATIONS.iter().any(|(m, _)| *m == 0));
+        assert!(DURATIONS.iter().all(|(_, l)| !l.is_empty()));
+    }
+
+    #[test]
+    fn timed_session_counts_down_and_stops() {
+        let mut k = KeepAwake::new();
+        assert!(!k.active() && !k.demo_active());
+        k.demo(60);
+        assert!(k.demo_active());
+        let left = k.remaining().unwrap().as_secs();
+        assert!((3590..=3600).contains(&left));
+        k.stop();
+        assert!(k.remaining().is_none() && !k.demo_active());
+    }
+
+    /// Really asks the system to stay awake; needs a desktop session.
+    #[test]
+    #[ignore]
+    fn holds_and_releases_a_system_inhibitor() {
+        let mut k = KeepAwake::new();
+        k.start(0, false);
+        assert!(k.active(), "{:?}", k.error);
+        assert!(k.remaining().is_none(), "until stopped has no end time");
+        k.stop();
+        assert!(!k.active());
+    }
+}

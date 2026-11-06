@@ -103,6 +103,11 @@ mod imp {
 
     fn devices(kind: &str) -> Vec<Device> {
         let Some(Value::Array(arr)) = pactl_json(&["list", kind]) else { return vec![] };
+        devices_from(&arr, kind)
+    }
+
+    /// Turns `pactl -f json list sinks|sources` output into devices (monitors skipped).
+    pub(super) fn devices_from(arr: &[Value], kind: &str) -> Vec<Device> {
         arr.iter()
             .filter(|d| kind != "sources" || prop(d, "device.class") != "monitor" && !d.get("name").and_then(|n| n.as_str()).unwrap_or("").ends_with(".monitor"))
             .map(|d| Device {
@@ -123,7 +128,22 @@ mod imp {
                 ..Default::default()
             };
         };
-        let streams = inputs
+        let streams = streams_from(&inputs);
+        MixerState {
+            available: true,
+            message: None,
+            caps: Caps::default(),
+            streams,
+            sinks: devices("sinks"),
+            sources: devices("sources"),
+            default_sink: pactl_text(&["get-default-sink"]).unwrap_or_default(),
+            default_source: pactl_text(&["get-default-source"]).unwrap_or_default(),
+        }
+    }
+
+    /// Turns `pactl -f json list sink-inputs` output into mixer rows.
+    pub(super) fn streams_from(inputs: &[Value]) -> Vec<Stream> {
+        inputs
             .iter()
             .map(|s| {
                 let mut app = prop(s, "application.name");
@@ -142,17 +162,7 @@ mod imp {
                     sink: s.get("sink").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
                 }
             })
-            .collect();
-        MixerState {
-            available: true,
-            message: None,
-            caps: Caps::default(),
-            streams,
-            sinks: devices("sinks"),
-            sources: devices("sources"),
-            default_sink: pactl_text(&["get-default-sink"]).unwrap_or_default(),
-            default_source: pactl_text(&["get-default-source"]).unwrap_or_default(),
-        }
+            .collect()
     }
 
     fn run(args: &[&str]) {
@@ -218,4 +228,54 @@ pub use imp::*;
 /// Commands run off the UI thread so a slow sound server never freezes the panel.
 pub fn spawn_cmd(f: impl FnOnce() + Send + 'static) {
     std::thread::spawn(f);
+}
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn demo_and_capabilities() {
+        let d = demo();
+        assert!(d.available);
+        assert_eq!(d.streams.len(), 3);
+        assert!(d.streams.iter().any(|s| s.volume > 1.0), "demo shows a boosted app");
+        let c = Caps::default();
+        assert!(c.per_app_volume && c.per_app_output && c.boost && c.switch_default);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn reads_pactl_json() {
+        let inputs: serde_json::Value = serde_json::from_str(r#"[
+            {"index": 42, "sink": 3, "mute": false,
+             "volume": {"front-left": {"value": 65536}, "front-right": {"value": 32768}},
+             "properties": {"application.name": "Music", "media.name": "Song"}},
+            {"index": 7, "sink": 3, "mute": true, "volume": {},
+             "properties": {"application.process.binary": "game"}}
+        ]"#).unwrap();
+        let s = imp::streams_from(inputs.as_array().unwrap());
+        assert_eq!(s.len(), 2);
+        assert_eq!((s[0].id, s[0].app.as_str(), s[0].media.as_str(), s[0].sink), (42, "Music", "Song", 3));
+        assert!((s[0].volume - 0.75).abs() < 1e-6, "average of both channels");
+        assert_eq!(s[1].app, "game");
+        assert!(s[1].muted);
+        assert_eq!(s[1].volume, 1.0, "missing volume counts as 100 %");
+
+        let sources: serde_json::Value = serde_json::from_str(r#"[
+            {"index": 1, "name": "mic", "description": "Microphone", "mute": false, "volume": {"mono": {"value": 65536}}, "properties": {}},
+            {"index": 2, "name": "speakers.monitor", "description": "Monitor of Speakers", "mute": false, "volume": {}, "properties": {"device.class": "monitor"}}
+        ]"#).unwrap();
+        let d = imp::devices_from(sources.as_array().unwrap(), "sources");
+        assert_eq!(d.len(), 1, "monitor sources are not microphones");
+        assert_eq!(d[0].description, "Microphone");
+    }
+
+    #[test]
+    fn reading_the_sound_system_never_panics() {
+        let s = read();
+        if !s.available {
+            assert!(s.message.is_some(), "an unavailable mixer explains why");
+        }
+    }
 }

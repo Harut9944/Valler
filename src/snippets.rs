@@ -54,3 +54,37 @@ mod tests {
         assert!(super::expand("{{date:%Y}}", "").len() == 4);
     }
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::expand;
+
+    #[test]
+    fn date_time_and_datetime_have_default_formats() {
+        let d = expand("{{date}}", "");
+        assert_eq!(d.len(), 10); // 2026-11-06
+        assert_eq!(d.matches('-').count(), 2);
+        let t = expand("{{time}}", "");
+        assert_eq!(t.len(), 5); // 14:05
+        assert!(t.contains(':'));
+        assert_eq!(expand("{{datetime}}", "").len(), 16);
+    }
+
+    #[test]
+    fn custom_formats_and_spaces_inside_braces() {
+        assert_eq!(expand("{{ date : %Y }}", "").len(), 4);
+        assert_eq!(expand("{{date:%d.%m}}", "").len(), 5);
+    }
+
+    #[test]
+    fn clipboard_and_name_variables() {
+        assert_eq!(expand("Re: {{clipboard}}", "hello"), "Re: hello");
+        assert!(!expand("{{name}}", "").is_empty());
+    }
+
+    #[test]
+    fn unknown_or_unclosed_variables_are_left_alone() {
+        assert_eq!(expand("{{nope}} {{date", ""), "{{nope}} {{date");
+        assert_eq!(expand("plain text", "x"), "plain text");
+    }
+}

@@ -231,3 +231,66 @@ impl Store {
         }
     }
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::*;
+
+    #[test]
+    fn defaults_install_working_features_and_sensible_options() {
+        let s = Store::default();
+        assert!(s.is_installed("monitor_cpu"));
+        assert!(!s.is_installed("switcher"), "features coming later are not installed");
+        assert!(s.is_on("clipboard"));
+        assert!(s.tray_enabled && s.close_to_tray && s.shelf_remove_after_use);
+        assert!(!any_alert(&s));
+        assert_eq!(s.alerts.cpu_threshold, 90);
+        assert_eq!(s.alerts.cooldown_minutes, 15);
+    }
+
+    fn any_alert(s: &Store) -> bool {
+        crate::alerts::any_enabled(s)
+    }
+
+    #[test]
+    fn switches_only_count_for_installed_features() {
+        let mut s = Store::default();
+        s.set_on("url_clean", true);
+        assert!(s.is_on("url_clean"));
+        s.installed.remove("url_clean");
+        assert!(!s.is_on("url_clean"));
+        s.set_on("clipboard", false);
+        assert!(!s.is_on("clipboard"));
+    }
+
+    #[test]
+    fn saved_settings_round_trip() {
+        let mut s = Store::default();
+        s.snippets.push(Snippet { trigger: ";x".into(), text: "y".into() });
+        s.tray_readout = crate::tray::Readout::Memory;
+        crate::shelf::add_text(&mut s.shelf_items, "note");
+        s.dirty_flag = true;
+        let json = serde_json::to_string(&s).unwrap();
+        let back: Store = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.snippets.len(), s.snippets.len());
+        assert_eq!(back.tray_readout, crate::tray::Readout::Memory);
+        assert_eq!(back.shelf_items.len(), 1);
+        assert!(!back.dirty_flag, "the unsaved-changes flag is never saved");
+    }
+
+    #[test]
+    fn old_settings_files_still_load() {
+        // A file from an earlier version, missing everything added since.
+        let back: Store = serde_json::from_str(r#"{"keep_awake_minutes": 30, "compact": true}"#).unwrap();
+        assert_eq!(back.keep_awake_minutes, 30);
+        assert!(back.tray_enabled);
+        assert_eq!(back.alerts.battery_percent, 15);
+        assert!(back.is_installed("monitor_cpu"));
+    }
+
+    #[test]
+    fn screenshot_mode_uses_sample_data() {
+        let s = Store::load(true);
+        assert_eq!(s.clip_history.len(), 2);
+    }
+}

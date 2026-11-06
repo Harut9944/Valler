@@ -93,3 +93,50 @@ mod tests {
         assert!(clean("hello world", "").is_none());
     }
 }
+
+#[cfg(test)]
+mod feature_tests {
+    use super::clean;
+
+    #[test]
+    fn removes_every_utm_parameter_and_global_trackers() {
+        let r = clean("https://shop.example/p?id=7&utm_campaign=x&utm_whatever=y&fbclid=z&gclid=1", "").unwrap();
+        assert_eq!(r.url, "https://shop.example/p?id=7");
+        assert_eq!(r.removed.len(), 4);
+    }
+
+    #[test]
+    fn site_rules_only_apply_on_their_site() {
+        // `t` is a tracker on X but the playback time on YouTube.
+        let x = clean("https://x.com/user/status/1?t=abc&s=20", "").unwrap();
+        assert_eq!(x.url, "https://x.com/user/status/1");
+        let yt = clean("https://youtube.com/watch?v=1&t=42", "").unwrap();
+        assert!(yt.removed.is_empty());
+        // Subdomains count as the site.
+        let m = clean("https://m.youtube.com/watch?v=1&si=abc", "").unwrap();
+        assert_eq!(m.removed, vec!["si".to_string()]);
+    }
+
+    #[test]
+    fn extra_parameters_from_settings_are_removed_everywhere() {
+        let r = clean("https://a.example/?ref=me&keep=1", "ref, source").unwrap();
+        assert_eq!(r.url, "https://a.example/?keep=1");
+    }
+
+    #[test]
+    fn keeps_fragment_and_drops_empty_query() {
+        let r = clean("https://a.example/page?utm_source=x#section", "").unwrap();
+        assert_eq!(r.url, "https://a.example/page#section");
+    }
+
+    #[test]
+    fn ignores_things_that_are_not_single_web_links() {
+        assert!(clean("", "").is_none());
+        assert!(clean("two words", "").is_none());
+        assert!(clean("ftp://files.example/a", "").is_none());
+        assert!(clean("mailto:a@b.c", "").is_none());
+        let unchanged = clean("  https://a.example/x?q=1  ", "").unwrap();
+        assert!(unchanged.removed.is_empty());
+        assert_eq!(unchanged.url, "https://a.example/x?q=1");
+    }
+}

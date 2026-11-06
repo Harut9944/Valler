@@ -151,9 +151,15 @@ pub struct ValleApp {
 
 impl ValleApp {
     pub fn new(cc: &eframe::CreationContext<'_>, opts: LaunchOptions) -> Self {
+        Self::with_context(cc.egui_ctx.clone(), opts)
+    }
+
+    /// Builds the app for an egui context (tests use this without a window).
+    /// With `opts.screenshot` set it runs on sample data and never touches the
+    /// person's settings, clipboard or tray.
+    pub fn with_context(ctx: egui::Context, opts: LaunchOptions) -> Self {
         let demo = opts.screenshot.is_some();
         let store = Store::load(demo);
-        let ctx = cc.egui_ctx.clone();
         let mon = monitor::spawn(ctx.clone());
         let clip = (!demo).then(|| Watcher::spawn(ctx.clone(), watch_config(&store)));
         let tab = opts
@@ -497,7 +503,7 @@ impl ValleApp {
         ui.add_space(4.0);
     }
 
-    fn panel(&mut self, ui: &mut Ui, ctx: &egui::Context) {
+    pub(crate) fn panel(&mut self, ui: &mut Ui, ctx: &egui::Context) {
         let margin = Margin { left: 16, right: 16, top: 10, bottom: 8 };
         let mut close = false;
         egui::Panel::top("header").show_separator_line(false)
