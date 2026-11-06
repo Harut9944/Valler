@@ -125,7 +125,9 @@ fn floating_shelf_draws_with_sample_items() {
 #[test]
 fn uninstalling_features_hides_their_tabs() {
     let (ctx, mut app) = demo_app();
-    assert_eq!(app.visible_tabs().len(), Tab::ALL.len());
+    // A tab shows when one of its features works on this OS (the mixer is Linux only).
+    let works = |t: &Tab| t.features().iter().any(|id| crate::core::features::get(id).is_some_and(|f| f.support.works_here()));
+    assert_eq!(app.visible_tabs(), Tab::ALL.into_iter().filter(works).collect::<Vec<_>>());
     for f in Tab::Network.features() {
         app.store.installed.remove(*f);
     }
