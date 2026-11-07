@@ -5,6 +5,9 @@
 #   Windows  x86_64 (amd64) and arm64  → .zip    (Valler.exe with its icon)
 #   macOS    arm64 (Apple silicon), x86_64 (Intel) and universal → Valler.app in a .zip
 #
+# Every push to main also refreshes the "latest" pre-release (tag `latest`) with
+# that commit's downloads, so the newest build is always on the Releases page.
+#
 # Run it by pushing a tag (git tag v0.2.0 && git push origin v0.2.0) or by hand
 # from the Actions tab (workflow_dispatch: builds and uploads artifacts only).
 #
@@ -14,8 +17,14 @@ name: Release
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
+
+# A newer commit on main replaces an unfinished build of an older one.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 
 permissions:
   contents: write
@@ -179,3 +188,34 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+  latest:
+    name: Publish latest build
+    if: github.ref == 'refs/heads/main'
+    needs: [build, macos-universal]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: valler-*
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # Replace the previous "latest" release and point its tag at this commit.
+      - name: Publish
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest dist/* \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Latest build (${GITHUB_SHA::7})" \
+            --notes "Built from ${GITHUB_SHA} on main: $(date -u '+%Y-%m-%d %H:%M UTC'). Updated on every commit; for stable downloads use a versioned release."
