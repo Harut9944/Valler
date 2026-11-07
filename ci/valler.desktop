@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Valler
+Comment=Everyday desktop utilities
+Exec=valler
+Icon=valler
+Terminal=false
+Categories=Utility;System;Monitor;
+StartupWMClass=valler
+Keywords=monitor;clipboard;keep awake;mixer;shelf;

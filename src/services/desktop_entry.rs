@@ -5,8 +5,13 @@
 
 #[cfg(target_os = "linux")]
 pub fn ensure() {
+    // A Flatpak installs its own launcher entry and icon.
+    if std::env::var_os("FLATPAK_ID").is_some() {
+        return;
+    }
     let Some(data) = dirs::data_dir() else { return };
-    let Ok(exe) = std::env::current_exe() else { return };
+    // An AppImage runs from a temporary mount; point the entry at the AppImage file.
+    let Some(exe) = std::env::var_os("APPIMAGE").map(std::path::PathBuf::from).or_else(|| std::env::current_exe().ok()) else { return };
     let apps = data.join("applications");
     let icons = data.join("icons/hicolor/256x256/apps");
     let desktop = apps.join("valler.desktop");

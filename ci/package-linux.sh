@@ -15,18 +15,7 @@ install -m 755 "$bin" "$stage/valler"
 install -m 644 "$here/assets/valler.png" "$stage/valler.png"
 install -m 644 "$here/README.md" "$stage/README.md"
 
-cat > "$stage/valler.desktop" <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=Valler
-Comment=Everyday desktop utilities
-Exec=valler
-Icon=valler
-Terminal=false
-Categories=Utility;System;Monitor;
-StartupWMClass=valler
-Keywords=monitor;clipboard;keep awake;mixer;shelf;
-EOF
+install -m 644 "$here/ci/valler.desktop" "$stage/valler.desktop"
 
 cat > "$stage/install.sh" <<'EOF'
 #!/usr/bin/env bash

@@ -69,9 +69,9 @@ and `cargo build --release --target x86_64-apple-darwin`.
   and macOS.
 - **Release** (`.github/workflows/release.yml`): builds and packages Valler for
 
-  | System  | x86_64 (amd64) | arm64 | Package |
-  |---------|----------------|-------|---------|
-  | Linux   | ✓ | ✓ | `.tar.gz`: program, launcher entry, icon, `install.sh` |
+  | System  | x86_64 (amd64) | arm64 (aarch64) | Package |
+  |---------|----------------|-----------------|---------|
+  | Linux   | ✓ | ✓ | `.tar.gz`: program, launcher entry, icon, `install.sh`; `.AppImage`; `.flatpak` bundle |
   | Windows | ✓ | ✓ | `.zip`: `Valler.exe` with its icon |
   | macOS   | ✓ (Intel) | ✓ (Apple silicon) | `Valler.app` in a `.zip`, plus a universal app |
 
@@ -81,7 +81,14 @@ and `cargo build --release --target x86_64-apple-darwin`.
   hand from the Actions tab builds the packages as downloadable artifacts
   without publishing.
 
-Packaging scripts live in `ci/`; the icons in `assets/` come from
+Linux downloads are named `…-linux-x86_64` and `…-linux-aarch64`. Run the
+AppImage directly (`chmod +x`, then start it); install the Flatpak with
+`flatpak install --user valler-<version>-linux-<arch>.flatpak` (app id
+`io.github.harut9944.Valler`, Freedesktop 25.08 runtime from Flathub). Inside
+the Flatpak sandbox, tools that inspect the host system (packages, ports, app
+search) see only what the sandbox exposes.
+
+Packaging scripts live in `ci/` (Flatpak manifest in `ci/flatpak/`); the icons in `assets/` come from
 `valler --export-icon assets/valler.png 1024`. macOS builds are signed ad hoc
 (first launch: right-click → Open); a Developer ID signature and notarization
 need an Apple developer certificate.
